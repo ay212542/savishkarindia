@@ -1,0 +1,458 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+/* SAVISHKAR: Deep Space Navy Theme - Active */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SAVISHKAR Design System - National Innovation Command Ecosystem */
+/* Deep Space Navy / Command Center Aesthetic */
+
+@layer base {
+  :root {
+    /* SAVISHKAR CALM DEEP BLUE AESTHETIC (Public Facing) */
+    /* Soft Deep Blue / Calm / Professional */
+    
+    /* Background: #0E1624 -> hsl(218 44% 10%) */
+    --background: 218 44% 10%;
+    /* Foreground: Soft White with hint of blue -> #F8FAFC */
+    --foreground: 210 40% 98%;
+
+    /* Card surfaces: #141E30 -> hsl(219 41% 13%) */
+    --card: 219 41% 13%;
+    --card-foreground: 210 40% 98%;
+
+    /* Popover/Dropdown */
+    --popover: 219 41% 13%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary - Bright Teal/Cyan: #22D3EE -> hsl(186 82% 53%) */
+    --primary: 186 82% 53%;
+    --primary-foreground: 222 47% 10%;
+
+    /* Secondary - Slightly lighter blue panel */
+    --secondary: 217 33% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted elements */
+    --muted: 217 33% 18%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Accent - Soft Orange: #F59E0B -> hsl(35 92% 50%) */
+    --accent: 35 92% 50%;
+    --accent-foreground: 222 47% 10%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders - Subtle Blue Grey */
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 186 82% 53%;
+
+    --radius: 1rem;
+
+    /* Custom Savishkar tokens */
+    --savishkar-teal: 186 82% 53%; /* Cyan leaning teal */
+    --savishkar-orange: 35 92% 50%;
+    --savishkar-cyan: 199 95% 60%; /* #38BDF8 */
+    --savishkar-navy: 218 44% 10%;
+    --savishkar-navy-light: 219 41% 13%;
+    --savishkar-navy-surface: 217 33% 18%;
+
+    /* Glow effects - Calm & Soft */
+    --glow-teal: 0 0 40px hsl(186 82% 53% / 0.15);
+    --glow-orange: 0 0 40px hsl(35 92% 50% / 0.15);
+    --glow-cyan: 0 0 30px hsl(199 95% 60% / 0.1);
+
+    /* Sidebar */
+    --sidebar-background: 219 41% 13%;
+    --sidebar-foreground: 210 40% 90%;
+    --sidebar-primary: 186 82% 53%;
+    --sidebar-primary-foreground: 222 47% 10%;
+    --sidebar-accent: 217 33% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 20%;
+    --sidebar-ring: 186 82% 53%;
+  }
+
+  /* ADMIN / DARK THEME (Original "Deep Space Navy") */
+  .dark {
+    /* Core Space Theme */
+    --background: 222 47% 5%;
+    --foreground: 210 40% 98%;
+
+    /* Card surfaces */
+    --card: 222 47% 7%;
+    --card-foreground: 210 40% 98%;
+
+    /* Popover/Dropdown */
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary */
+    --primary: 168 84% 40%;
+    --primary-foreground: 222 47% 5%;
+
+    /* Secondary */
+    --secondary: 222 47% 12%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted */
+    --muted: 222 30% 15%;
+    --muted-foreground: 215 20% 55%;
+
+    /* Accent */
+    --accent: 24 95% 53%;
+    --accent-foreground: 222 47% 5%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders */
+    --border: 222 30% 18%;
+    --input: 222 30% 15%;
+    --ring: 168 84% 40%;
+
+    /* Custom Savishkar tokens */
+    --savishkar-teal: 168 84% 40%;
+    --savishkar-orange: 24 95% 53%;
+    --savishkar-cyan: 188 94% 49%;
+    --savishkar-navy: 222 47% 5%;
+    --savishkar-navy-light: 222 47% 8%;
+    --savishkar-navy-surface: 222 47% 12%;
+
+    /* Glow effects */
+    --glow-teal: 0 0 30px hsl(168 84% 40% / 0.3);
+    --glow-orange: 0 0 30px hsl(24 95% 53% / 0.3);
+    --glow-cyan: 0 0 20px hsl(188 94% 49% / 0.2);
+
+    /* Sidebar */
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 210 40% 90%;
+    --sidebar-primary: 168 84% 40%;
+    --sidebar-primary-foreground: 222 47% 5%;
+    --sidebar-accent: 222 47% 12%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 30% 18%;
+    --sidebar-ring: 168 84% 40%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+}
+
+@layer components {
+
+  /* Glassmorphism panels */
+  .glass-panel {
+    @apply bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-panel-strong {
+    @apply bg-card/95 backdrop-blur-2xl border border-border rounded-3xl;
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  /* Glow button styles */
+  .glow-button-teal {
+    @apply relative overflow-hidden;
+    box-shadow: var(--glow-teal);
+    transition: all 0.3s ease;
+  }
+
+  .glow-button-teal:hover {
+    box-shadow: 0 0 50px hsl(168 84% 40% / 0.5);
+    transform: translateY(-2px);
+  }
+
+  .glow-button-orange {
+    @apply relative overflow-hidden;
+    box-shadow: var(--glow-orange);
+    transition: all 0.3s ease;
+  }
+
+  .glow-button-orange:hover {
+    box-shadow: 0 0 50px hsl(24 95% 53% / 0.5);
+    transform: translateY(-2px);
+  }
+
+  /* Animated grid background */
+  .grid-background {
+    background-image:
+      linear-gradient(to right, hsl(222 30% 25% / 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(222 30% 25% / 0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .grid-background-animated {
+    background-image:
+      linear-gradient(to right, hsl(222 30% 25% / 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(222 30% 25% / 0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridMove 20s linear infinite;
+  }
+
+  @keyframes gridMove {
+    0% {
+      background-position: 0 0;
+    }
+
+    100% {
+      background-position: 60px 60px;
+    }
+  }
+
+  /* Text gradients */
+  .text-gradient-teal {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--savishkar-teal)), hsl(var(--savishkar-cyan)));
+  }
+
+  .text-gradient-orange {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--savishkar-orange)), hsl(var(--savishkar-teal)));
+  }
+
+  .text-gradient-hero {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--foreground)), hsl(var(--savishkar-teal)) 50%, hsl(var(--savishkar-orange)));
+  }
+
+  /* Card hover effects */
+  .card-hover {
+    @apply transition-all duration-300;
+  }
+
+  .card-hover:hover {
+    @apply border-primary/50;
+    box-shadow: 0 0 30px hsl(168 84% 40% / 0.15);
+    transform: translateY(-4px);
+  }
+
+  /* Stat cards */
+  .stat-card {
+    @apply glass-panel p-6 text-center;
+    background: linear-gradient(135deg,
+        hsl(222 47% 8% / 0.9) 0%,
+        hsl(222 47% 6% / 0.9) 100%);
+  }
+
+  /* Command console styles */
+  .command-panel {
+    @apply bg-card border border-border rounded-2xl overflow-hidden;
+    box-shadow:
+      0 0 0 1px hsl(222 30% 20% / 0.5),
+      0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  .command-header {
+    @apply bg-secondary/50 px-6 py-4 border-b border-border flex items-center gap-3;
+  }
+
+  /* Status indicators */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-online {
+    @apply bg-emerald-400;
+    box-shadow: 0 0 10px hsl(160 84% 45% / 0.5);
+  }
+
+  .status-pending {
+    @apply bg-amber-400;
+    box-shadow: 0 0 10px hsl(45 93% 58% / 0.5);
+  }
+
+  .status-offline {
+    @apply bg-red-400;
+    box-shadow: 0 0 10px hsl(0 84% 60% / 0.5);
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(222 47% 8%);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(222 30% 25%);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(222 30% 35%);
+  }
+
+  /* Form input focus glow */
+  .input-glow:focus {
+    box-shadow: 0 0 0 2px hsl(168 84% 40% / 0.3);
+  }
+
+  /* Loading skeleton */
+  .skeleton-shimmer {
+    background: linear-gradient(90deg,
+        hsl(222 47% 10%) 0%,
+        hsl(222 47% 15%) 50%,
+        hsl(222 47% 10%) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* ID Card styles */
+  .id-card {
+    @apply relative overflow-hidden rounded-2xl;
+    aspect-ratio: 1.6;
+    background: linear-gradient(135deg,
+        hsl(222 47% 10%) 0%,
+        hsl(222 47% 6%) 100%);
+  }
+
+  .id-card-modern {
+    border: 2px solid hsl(168 84% 40% / 0.5);
+    box-shadow:
+      0 0 30px hsl(168 84% 40% / 0.2),
+      inset 0 0 60px hsl(168 84% 40% / 0.05);
+  }
+
+  .id-card-cyber {
+    border: 2px solid hsl(188 94% 49% / 0.5);
+    box-shadow:
+      0 0 30px hsl(188 94% 49% / 0.2),
+      inset 0 0 60px hsl(188 94% 49% / 0.05);
+  }
+
+  .id-card-premium {
+    border: 2px solid hsl(24 95% 53% / 0.5);
+    background: linear-gradient(135deg,
+        hsl(222 47% 12%) 0%,
+        hsl(222 47% 6%) 50%,
+        hsl(24 95% 53% / 0.1) 100%);
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out;
+  }
+
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pulseGlow {
+
+    0%,
+    100% {
+      box-shadow: 0 0 20px hsl(168 84% 40% / 0.3);
+    }
+
+    50% {
+      box-shadow: 0 0 40px hsl(168 84% 40% / 0.5);
+    }
+  }
+
+
+}
+
+/* Animations */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  animation: gradient 6s ease infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
