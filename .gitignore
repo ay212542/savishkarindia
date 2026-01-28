@@ -4,7 +4,8 @@
 .env*.local
 
 # Backend
-supabase/
+/supabase/
+
 
 # Logs
 logs

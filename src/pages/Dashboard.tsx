@@ -82,7 +82,7 @@ export default function Dashboard() {
 
       await refreshProfile();
       toast({ title: "Success", description: "Avatar updated successfully" });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Upload error:", error);
       toast({ title: "Error", description: "Failed to upload avatar", variant: "destructive" });
     } finally {

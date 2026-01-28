@@ -72,11 +72,12 @@ export default function Verify() {
         }
 
         // If not found in profiles, check applications for pending/rejected
-        const { data: application } = await supabase
-          .from("applications")
+        const { data: application } = await (supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .from("applications") as any)
           .select("*")
           .eq("membership_id", membershipId)
-          .maybeSingle() as any;
+          .maybeSingle();
 
         if (application) {
           if (application.status === "pending") {

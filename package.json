@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "Savishkar India - Youth Empowerment Platform",
+  "homepage": "./",
   "type": "module",
   "scripts": {
     "dev": "vite",
