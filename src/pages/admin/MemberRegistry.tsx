@@ -281,16 +281,20 @@ export default function MemberRegistry() {
       }
 
     } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('Fetch aborted');
+        return;
+      }
       console.error("Transfer error:", error);
       toast({
         title: "Transfer Failed",
         description: error.message || "Could not transfer member.",
         variant: "destructive"
       });
+    } finally {
+      setShowTransferDialog(false);
+      setProcessing(false);
     }
-
-    setShowTransferDialog(false);
-    setProcessing(false);
   }
 
   const canChangeRole = (targetRole: AppRole | null) => {
