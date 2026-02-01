@@ -90,6 +90,9 @@ export default function MemberRegistry() {
 
       setMembers(fetchedMembers);
     } catch (error: any) {
+      if (error.name === 'AbortError') {
+        return;
+      }
       console.error("Error fetching members:", error);
       setErrorMsg(error?.message || JSON.stringify(error));
       toast({
