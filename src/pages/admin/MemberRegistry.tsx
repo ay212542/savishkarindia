@@ -50,17 +50,17 @@ export default function MemberRegistry() {
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [targetState, setTargetState] = useState("");
   const [processing, setProcessing] = useState(false);
-  const { user, profile, role: currentUserRole } = useAuth();
+  const { user, profile, role: currentUserRole, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
   const isStateAdmin = currentUserRole === "STATE_CONVENER" || currentUserRole === "STATE_CO_CONVENER";
   const userState = profile?.state;
 
   useEffect(() => {
-    if (user) {
+    if (!authLoading && user) {
       fetchMembers();
     }
-  }, [user, currentUserRole, userState]);
+  }, [user, currentUserRole, userState, authLoading]);
 
   async function fetchMembers() {
     try {
