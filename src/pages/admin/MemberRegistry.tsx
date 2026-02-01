@@ -92,7 +92,11 @@ export default function MemberRegistry() {
     } catch (error: any) {
       console.error("Error fetching members:", error);
       setErrorMsg(error?.message || JSON.stringify(error));
-      toast({ title: "Error", description: "Failed to load members.", variant: "destructive" });
+      toast({
+        title: "Error fetching members",
+        description: error?.message || "Check console for details.",
+        variant: "destructive"
+      });
     }
     setLoading(false);
   }
