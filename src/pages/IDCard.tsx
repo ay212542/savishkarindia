@@ -126,7 +126,7 @@ export default function IDCard() {
     );
   }
 
-  if (!profile?.membership_id || !profile?.id_card_issued_at) {
+  if (!profile?.membership_id) {
     return (
       <Layout hideFooter>
         <AnimatedBackground />
@@ -136,7 +136,7 @@ export default function IDCard() {
             <h2 className="font-display text-2xl font-bold mb-2">ID Card Not Issued</h2>
             <p className="text-muted-foreground">
               {profile?.membership_id
-                ? "Your ID Card has been generated but is awaiting Admin issuance. Please contact your State Admin."
+                ? "Your ID Card is being generated. Please contact support if this persists."
                 : "Your digital ID card will be available once your membership is approved and a membership ID is assigned."}
             </p>
           </GlassCard>

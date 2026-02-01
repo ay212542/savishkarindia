@@ -47,31 +47,31 @@ export default function Verify() {
 
       setStatus("loading");
       try {
-        // First check for active member by membership_id
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("membership_id", membershipId)
-          .single();
+        // 1. Try public RPC first (works for everyone including unauthenticated)
+        const { data: rpcData, error: rpcError } = await supabase
+          .rpc("get_member_public_profile" as any, { lookup_id: membershipId });
 
-        if (profile && !error) {
-          // Get user role
-          const { data: roleData } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", profile.user_id)
-            .single();
-
+        if (rpcData && !rpcError && (rpcData as any).length > 0) {
+          const profile = (rpcData as any)[0];
           setMemberData({
-            ...profile,
-            role: roleData?.role || null,
-            status: "ACTIVE"
+            full_name: profile.full_name,
+            email: "Hidden", // Public RPC doesn't return email
+            membership_id: profile.membership_id,
+            state: profile.state,
+            designation: null, // Basic view
+            avatar_url: profile.avatar_url,
+            created_at: profile.created_at,
+            updated_at: profile.created_at,
+            role: profile.role,
+            status: "ACTIVE",
+            joined_year: profile.joined_year
           });
           setStatus("active");
           return;
         }
 
-        // If not found in profiles, check applications for pending/rejected
+        // 2. Fallback: If not found via RPC, it might be a pending/rejected application
+        // (This still requires some permissions or open policies on applications table)
         const { data: application } = await (supabase
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .from("applications") as any)

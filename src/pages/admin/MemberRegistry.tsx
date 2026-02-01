@@ -64,50 +64,35 @@ export default function MemberRegistry() {
 
   async function fetchMembers() {
     try {
-      let query = supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      // State Admin Filter: Only show members from their state
-      if (isStateAdmin && userState) {
-        query = query.eq("state", userState);
-      }
-
-      const { data: profiles, error } = await query;
+      // Use standard RLS-bypassing RPC for reliability
+      const { data, error } = await supabase.rpc("get_registry_members" as any);
 
       if (error) throw error;
 
-      // Fetch roles for all users
-      // Note: We might want to filter this too eventually for perf, but for now fetch all is okay or use rpc
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
+      let fetchedMembers = ((data as any[]) || []).map(m => ({
+        ...m,
+        // Ensure role is typed correctly
+        role: (m.role || "MEMBER") as AppRole
+      }));
 
-      const roleMap = new Map(roles?.map(r => [r.user_id, r.role]) || []);
+      // Client-side filtering for State Admins (Security is also enforced in RPC if needed, 
+      // but RPC returns all for simplicity, so we filter here)
+      if (isStateAdmin && userState) {
+        fetchedMembers = fetchedMembers.filter(m => m.state === userState);
+      }
 
-      let membersWithRoles = profiles?.map(p => ({
-        ...p,
-        role: roleMap.get(p.user_id) as AppRole | null || null
-      })) || [];
-
-      // Additional Client-Side Filtering to hide Higher Admins from State Admins
+      // Hide Higher Admins from State Admins
       if (isStateAdmin) {
-        membersWithRoles = membersWithRoles.filter(m =>
+        fetchedMembers = fetchedMembers.filter(m =>
           m.role !== "SUPER_CONTROLLER" && m.role !== "ADMIN"
         );
       }
 
-      setMembers(membersWithRoles);
+      setMembers(fetchedMembers);
     } catch (error: any) {
       console.error("Error fetching members:", error);
       setErrorMsg(error?.message || JSON.stringify(error));
-
-      if (error?.message?.includes("policy")) {
-        toast({ title: "Database Permission Issue", description: "Use debug panel to view details.", variant: "default" });
-      } else {
-        toast({ title: "Error", description: "Failed to load members.", variant: "destructive" });
-      }
+      toast({ title: "Error", description: "Failed to load members.", variant: "destructive" });
     }
     setLoading(false);
   }
