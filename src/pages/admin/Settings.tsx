@@ -64,16 +64,27 @@ export default function Settings() {
     }
 
     setChangingPassword(true);
+    console.log("Attempting password update..."); // DEBUG
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
+      const { data, error } = await supabase.auth.updateUser({ password: newPassword });
 
+      if (error) {
+        console.error("Password update error:", error);
+        throw error;
+      }
+
+      console.log("Password update success:", data);
       toast({ title: "Success", description: "Password changed successfully." });
       setShowPasswordDialog(false);
       setNewPassword("");
       setConfirmPassword("");
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      console.error("Password change exception:", error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Could not update password. Please try again.",
+        variant: "destructive"
+      });
     }
     setChangingPassword(false);
   }

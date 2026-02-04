@@ -201,13 +201,14 @@ export default function MemberRegistry() {
     setProcessing(true);
 
     try {
-      // Delete user via supabase admin (this cascades to profiles and roles)
-      // Note: In production, this would need a backend function
-      const { error } = await supabase.auth.admin.deleteUser(selectedMember.user_id);
+      // Delete user via secure RPC
+      const { error } = await supabase.rpc("delete_member", {
+        target_user_id: selectedMember.user_id
+      });
 
       if (error) throw error;
 
-      // Log the action
+      // Log the action (Optional, as RPC could log it too, but client logging is fine for immediate feedback)
       await supabase.from("audit_logs").insert({
         action: "USER_DELETED",
         user_id: user?.id,
