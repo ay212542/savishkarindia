@@ -1,11 +1,11 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, Users, FileCheck, Calendar,
   Megaphone, Palette, Bot, Settings, Shield, ChevronRight, LogOut,
   Award, MapPin, UserCog, FileText, MessageSquare, BookOpen, FileDown,
-  Handshake, LayoutTemplate, GraduationCap
+  Handshake, LayoutTemplate, GraduationCap, Menu, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,6 +41,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar state
 
   const handleLogout = async () => {
     console.log("Logout clicked!"); // DEBUG
@@ -118,9 +119,21 @@ export default function AdminLayout() {
   return (
     <div className="dark min-h-screen bg-background text-foreground flex">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-sidebar-background flex flex-col z-[9999] relative">
+      {/* Mobile Toggle */}
+      <div className="lg:hidden absolute top-4 left-4 z-50">
+        <Button variant="outline" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+          <Menu className="w-5 h-5" />
+        </Button>
+      </div>
+
+      {/* Sidebar - Desktop & Mobile */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-[9999] w-64 bg-sidebar-background border-r border-border flex flex-col transition-transform duration-300 ease-in-out
+        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        lg:translate-x-0 lg:static lg:block
+      `}>
         {/* Logo */}
-        <div className="p-4 border-b border-border">
+        <div className="p-4 border-b border-border flex justify-between items-center">
           <Link to="/" className="flex items-center gap-3">
             <img
               src={logoSavishkar}
@@ -132,6 +145,10 @@ export default function AdminLayout() {
               <span className="text-xs text-muted-foreground">Command Console</span>
             </div>
           </Link>
+          {/* Mobile Close Button */}
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(false)}>
+            <X className="w-5 h-5" />
+          </Button>
         </div>
 
         {/* Navigation */}
@@ -144,7 +161,10 @@ export default function AdminLayout() {
                 <Link
                   key={item.href}
                   to={item.href}
-                  onClick={() => console.log(`Navigating to ${item.href}`)}
+                  onClick={() => {
+                    console.log(`Navigating to ${item.href}`);
+                    setIsSidebarOpen(false); // Close on mobile click
+                  }}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${isActive
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground hover:bg-sidebar-accent"
