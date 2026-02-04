@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, User, LogOut, LayoutDashboard, Shield, ChevronDown, FileText, BookOpen, FileDown } from "lucide-react";
+import { useNavigate } from "react-router-dom"; // Add useNavigate
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast"; // Add useToast
 import logoSavishkar from "@/assets/logo-savishkar.png";
 import {
   DropdownMenu,
@@ -24,7 +26,15 @@ const navLinks = [
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const { user, isAdmin, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    toast({ title: "Logged out", description: "You have been successfully logged out." });
+    navigate("/auth");
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
@@ -98,7 +108,7 @@ export function Navbar() {
                     </Button>
                   </Link>
                 )}
-                <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
                   <LogOut className="w-4 h-4" />
                   Logout
                 </Button>
@@ -185,7 +195,7 @@ export function Navbar() {
                         </Button>
                       </Link>
                     )}
-                    <Button variant="ghost" onClick={signOut} className="w-full justify-start gap-2">
+                    <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2">
                       <LogOut className="w-4 h-4" />
                       Logout
                     </Button>

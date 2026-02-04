@@ -176,9 +176,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setProfile(null);
-    setRole(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    } finally {
+      setProfile(null);
+      setRole(null);
+      setUser(null);
+      setSession(null);
+    }
   };
 
   const isAdmin = role === "ADMIN" || role === "SUPER_CONTROLLER" || role === "STATE_CONVENER" || role === "STATE_CO_CONVENER";

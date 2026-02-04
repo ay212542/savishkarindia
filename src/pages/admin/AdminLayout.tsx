@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { ROLE_LABELS } from "@/lib/constants";
 import logoSavishkar from "@/assets/logo-savishkar.png";
 
@@ -40,6 +41,13 @@ export default function AdminLayout() {
   const { user, profile, role, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    await signOut();
+    toast({ title: "Logged out", description: "You have been successfully logged out." });
+    navigate("/auth");
+  };
 
   const isStateAdmin = role === "STATE_CONVENER" || role === "STATE_CO_CONVENER";
   const hasAccess = isAdmin || isStateAdmin || user?.email === "savishkarindia@gmail.com";
@@ -151,7 +159,7 @@ export default function AdminLayout() {
                 Member View
               </Button>
             </Link>
-            <Button variant="ghost" size="sm" onClick={signOut} className="px-2">
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="px-2">
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
