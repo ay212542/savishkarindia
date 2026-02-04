@@ -43,9 +43,15 @@ export default function AdminLayout() {
   const { toast } = useToast();
 
   const handleLogout = async () => {
-    await signOut();
-    toast({ title: "Logged out", description: "You have been successfully logged out." });
-    navigate("/auth");
+    console.log("Logout clicked!"); // DEBUG
+    try {
+      await signOut();
+      console.log("SignOut finished"); // DEBUG
+      toast({ title: "Logged out", description: "You have been successfully logged out." });
+      navigate("/auth");
+    } catch (e) {
+      console.error("Logout failed", e);
+    }
   };
 
   const isStateAdmin = role === "STATE_CONVENER" || role === "STATE_CO_CONVENER";
@@ -112,7 +118,7 @@ export default function AdminLayout() {
   return (
     <div className="dark min-h-screen bg-background text-foreground flex">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-sidebar-background flex flex-col z-20 relative">
+      <aside className="w-64 border-r border-border bg-sidebar-background flex flex-col z-[9999] relative">
         {/* Logo */}
         <div className="p-4 border-b border-border">
           <Link to="/" className="flex items-center gap-3">
@@ -138,7 +144,8 @@ export default function AdminLayout() {
                 <Link
                   key={item.href}
                   to={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
+                  onClick={() => console.log(`Navigating to ${item.href}`)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${isActive
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground hover:bg-sidebar-accent"
                     }`}
