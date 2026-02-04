@@ -8,7 +8,6 @@ import {
   Handshake, LayoutTemplate, GraduationCap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { ROLE_LABELS } from "@/lib/constants";
@@ -113,7 +112,7 @@ export default function AdminLayout() {
   return (
     <div className="dark min-h-screen bg-background text-foreground flex">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-sidebar-background flex flex-col">
+      <aside className="w-64 border-r border-border bg-sidebar-background flex flex-col z-20 relative">
         {/* Logo */}
         <div className="p-4 border-b border-border">
           <Link to="/" className="flex items-center gap-3">
@@ -130,7 +129,7 @@ export default function AdminLayout() {
         </div>
 
         {/* Navigation */}
-        <ScrollArea className="flex-1 p-3">
+        <div className="flex-1 overflow-y-auto p-3">
           <nav className="space-y-1">
             {filteredSidebarItems.map((item) => {
               const Icon = item.icon;
@@ -151,7 +150,7 @@ export default function AdminLayout() {
               );
             })}
           </nav>
-        </ScrollArea>
+        </div>
 
         {/* User Info */}
         <div className="p-4 border-t border-border">
