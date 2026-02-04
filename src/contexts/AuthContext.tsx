@@ -187,14 +187,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      // Attempt standard sign out
+      const { error } = await supabase.auth.signOut();
+      if (error) console.error("Supabase signOut error:", error);
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {
+      // FORCE CLEANUP
+      console.log("Executing Force Cleanup and Redirect");
+
+      // 1. Clear Context State
       setProfile(null);
       setRole(null);
       setUser(null);
       setSession(null);
+
+      // 2. Clear Local Storage (Supabase tokens)
+      localStorage.clear(); // Wipes everything to be safe
+
+      // 3. Force Hard Redirect
+      window.location.href = "/auth";
     }
   };
 
