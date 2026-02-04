@@ -202,7 +202,7 @@ export default function MemberRegistry() {
 
     try {
       // Delete user via secure RPC
-      const { error } = await supabase.rpc("delete_member", {
+      const { error } = await supabase.rpc("delete_member" as any, {
         target_user_id: selectedMember.user_id
       });
 
