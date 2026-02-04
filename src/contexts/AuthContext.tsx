@@ -72,11 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       let finalRole = roleData?.role as AppRole | null;
 
-      // EMERGENCY BACKDOOR: Force Super Controller for owner
-      // This runs regardless of what is in the database
-      if (profileData?.email === "savishkarindia@gmail.com") {
-        console.log("DEBUG: OVERRIDE: Applying Emergency Admin Access for owner");
-        finalRole = "SUPER_CONTROLLER";
+      // Role determined completely by DB now (Zero Trust)
+      if (profileData?.email === "savishkarindia@gmail.com" && !finalRole) {
+        // Fallback logging only
+        console.warn("Owner logged in but no role found in DB. Please run security migration.");
       }
 
       if (finalRole) {
