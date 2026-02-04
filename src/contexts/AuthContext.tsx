@@ -186,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    console.log("AuthContext: signOut called"); // DEBUG
     try {
       // Attempt standard sign out
       const { error } = await supabase.auth.signOut();
@@ -206,7 +207,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.clear(); // Wipes everything to be safe
 
       // 3. Force Hard Redirect
-      window.location.href = "/auth";
+      window.location.replace("/auth");
+      window.location.reload();
     }
   };
 
