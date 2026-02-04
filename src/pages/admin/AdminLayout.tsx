@@ -53,10 +53,11 @@ export default function AdminLayout() {
   const hasAccess = isAdmin || isStateAdmin || user?.email === "savishkarindia@gmail.com";
 
   useEffect(() => {
-    if (!loading && (!user || !hasAccess)) {
+    // Only redirect to auth if explicitly not logged in and not loading
+    if (!loading && !user) {
       navigate("/auth");
     }
-  }, [user, hasAccess, loading, navigate]);
+  }, [user, loading, navigate]);
 
   // Filter sidebar items based on role
   const filteredSidebarItems = sidebarItems.filter(item => {
@@ -89,7 +90,17 @@ export default function AdminLayout() {
   }
 
   if (!hasAccess) {
-    return null;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 text-center">
+        <Shield className="w-16 h-16 text-destructive mb-4" />
+        <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+        <p className="text-muted-foreground mb-6">You do not have permission to view the Admin Console.</p>
+        <div className="flex gap-4">
+          <Button variant="outline" onClick={() => navigate("/")}>Go Home</Button>
+          <Button variant="ghost" onClick={handleLogout}>Logout</Button>
+        </div>
+      </div>
+    );
   }
 
   const isActiveLink = (href: string, exact = false) => {

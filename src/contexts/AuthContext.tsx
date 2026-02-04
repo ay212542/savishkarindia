@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
+    if (!userId) return;
     try {
       const { data: profileData } = await supabase
         .from("profiles")
@@ -97,12 +98,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+        // Only update if session actually changed or on initial load
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+          setSession(session);
+          setUser(session?.user ?? null);
 
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          } else {
+            setProfile(null);
+            setRole(null);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
           setProfile(null);
           setRole(null);
         }
@@ -110,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
+    // Initial check
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
