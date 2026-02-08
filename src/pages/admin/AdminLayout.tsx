@@ -196,14 +196,16 @@ export default function AdminLayout() {
                 Member View
               </Button>
             </Link>
-            <div
+            <Button
               onClick={handleLogout}
-              className="px-2 py-2 hover:bg-red-500/10 rounded-md cursor-pointer transition-colors text-red-500"
-              role="button"
+              variant="ghost"
+              size="icon"
+              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+              title="Logout"
               id="force-logout-btn"
             >
               <LogOut className="w-4 h-4" />
-            </div>
+            </Button>
           </div>
         </div>
       </aside>

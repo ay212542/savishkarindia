@@ -187,27 +187,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     console.log("AuthContext: signOut called"); // DEBUG
     try {
-      // Attempt standard sign out
+      // 1. Attempt standard sign out
       const { error } = await supabase.auth.signOut();
       if (error) console.error("Supabase signOut error:", error);
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {
-      // FORCE CLEANUP
-      console.log("Executing Force Cleanup and Redirect");
-
-      // 1. Clear Context State
+      // 2. Clear Context State - This should trigger re-renders
       setProfile(null);
       setRole(null);
       setUser(null);
       setSession(null);
 
-      // 2. Clear Local Storage (Supabase tokens)
-      localStorage.clear(); // Wipes everything to be safe
+      // 3. Clear Local Storage (Supabase tokens)
+      localStorage.clear();
 
-      // 3. Force Hard Redirect
-      window.location.replace("/auth");
-      window.location.reload();
+      // We don't force reload anymore, let the router handle it
     }
   };
 
