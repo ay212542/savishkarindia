@@ -201,30 +201,18 @@
     transform: translateY(-2px);
   }
 
-  /* Animated grid background */
+  /* Animated grid background - Simplified to static to reduce paint load */
   .grid-background {
     background-image:
       linear-gradient(to right, hsl(222 30% 25% / 0.1) 1px, transparent 1px),
       linear-gradient(to bottom, hsl(222 30% 25% / 0.1) 1px, transparent 1px);
     background-size: 40px 40px;
+    /* Removed heavy infinite animation 'gridMove' for performance */
   }
 
   .grid-background-animated {
-    background-image:
-      linear-gradient(to right, hsl(222 30% 25% / 0.1) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(222 30% 25% / 0.1) 1px, transparent 1px);
-    background-size: 40px 40px;
-    animation: gridMove 20s linear infinite;
-  }
-
-  @keyframes gridMove {
-    0% {
-      background-position: 0 0;
-    }
-
-    100% {
-      background-position: 60px 60px;
-    }
+     @apply grid-background;
+     /* Fallback to static if performance is an issue */
   }
 
   /* Text gradients */

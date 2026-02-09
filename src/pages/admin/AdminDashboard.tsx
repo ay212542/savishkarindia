@@ -45,29 +45,43 @@ export default function AdminDashboard() {
   const [permissionError, setPermissionError] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchStats() {
+      if (!profile?.id) return;
+
       try {
         console.log("Fetching Admin Stats...");
-        // Queries
-        const membersQuery = supabase.from("profiles" as any).select("*", { count: "exact", head: true });
-        const pendingQuery = supabase.from("applications" as any).select("*", { count: "exact", head: true }).eq("status", "pending");
-        const eventsQuery = supabase.from("events" as any).select("*", { count: "exact", head: true }).eq("is_published", true);
+        // Queries - Optimize by not fetching everything if not needed
+        // For counts, use { count: 'exact', head: true } to avoid downloading rows!
+        const membersCountQuery = supabase.from("profiles").select("*", { count: "exact", head: true });
+        const pendingCountQuery = supabase.from("applications").select("*", { count: "exact", head: true }).eq("status", "pending");
+        const eventsCountQuery = supabase.from("events").select("*", { count: "exact", head: true }).eq("is_published", true);
+
+        // Specific queries for charts - Limit columns!
+        // fetching "role" from user_roles is okay
+        const rolesQuery = supabase.from("user_roles").select("role");
+
+        // Optimize profiles query - only need state/district for stats
+        const profilesQuery = supabase.from("profiles").select("state, district");
 
         let activityQuery = supabase
-          .from("audit_logs" as any)
-          .select("*")
+          .from("audit_logs")
+          .select("id, action, created_at")
           .order("created_at", { ascending: false })
           .limit(10);
 
         // Execute all queries safely
         const results = await Promise.allSettled([
-          membersQuery,
-          pendingQuery,
-          eventsQuery,
-          supabase.from("user_roles" as any).select("role"),
-          supabase.from("profiles" as any).select("state, district"),
+          membersCountQuery,
+          pendingCountQuery,
+          eventsCountQuery,
+          rolesQuery,
+          profilesQuery,
           activityQuery
         ]);
+
+        if (!isMounted) return;
 
         // Helper to extract data safely
         const getRes = (result: PromiseSettledResult<any>, label: string) => {
@@ -99,15 +113,16 @@ export default function AdminDashboard() {
         // Process Stats
         const roleStats: Record<string, number> = {};
         const rolesData = rolesRes.data || [];
-        if (!isStateAdmin) {
-          rolesData.forEach((r: any) => {
-            if (r.role) roleStats[r.role] = (roleStats[r.role] || 0) + 1;
-          });
-        }
+
+        // Calculate role stats
+        rolesData.forEach((r: any) => {
+          if (r.role) roleStats[r.role] = (roleStats[r.role] || 0) + 1;
+        });
 
         const stateStats: Record<string, number> = {};
         const profilesData = profilesRes.data || [];
 
+        // Filter for State Admin if needed
         const stateProfiles = (isStateAdmin && userState)
           ? profilesData.filter((p: any) => p.state === userState)
           : profilesData;
@@ -142,10 +157,12 @@ export default function AdminDashboard() {
       setLoading(false);
     }
 
-    if (profile) {
+    if (profile?.id) {
       fetchStats();
     }
-  }, [profile, role, isStateAdmin, userState]);
+
+    return () => { isMounted = false; };
+  }, [profile?.id, isStateAdmin, userState]); // DEPENDENCY FIX: Use profile.id, not profile object!
 
   const statCards = [
     {

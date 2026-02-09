@@ -30,124 +30,127 @@ export default function DistrictManager() {
     const { toast } = useToast();
 
     useEffect(() => {
-        fetchStats();
-    }, []);
+        let isMounted = true;
 
-    async function fetchStats() {
-        try {
-            // Fetch real data aggregation
+        async function fetchStats() {
+            if (!user) return; // Wait for auth
+
             try {
-                const [profilesResponse, leadersResponse, adminsResponse] = await Promise.all([
-                    supabase.from("profiles").select("user_id, state, district"),
-                    supabase.from("leaders").select("prant, district"),
-                    supabase.from("user_roles").select("user_id, role")
-                        .in("role", ["STATE_CONVENER", "STATE_CO_CONVENER"])
-                ]);
+                // Fetch real data aggregation
+                try {
+                    const [profilesResponse, leadersResponse, adminsResponse] = await Promise.all([
+                        supabase.from("profiles").select("user_id, state, district"),
+                        supabase.from("leaders").select("prant, district"),
+                        supabase.from("user_roles").select("user_id, role")
+                            .in("role", ["STATE_CONVENER", "STATE_CO_CONVENER"])
+                    ]);
 
-                if (profilesResponse.error) throw profilesResponse.error;
-                if (leadersResponse.error) throw leadersResponse.error;
-                if (adminsResponse.error) throw adminsResponse.error;
+                    if (!isMounted) return;
 
-                const profiles = profilesResponse.data || [];
-                const leaders = leadersResponse.data || [];
-                const adminRoles = adminsResponse.data || [];
+                    if (profilesResponse.error) throw profilesResponse.error;
+                    if (leadersResponse.error) throw leadersResponse.error;
+                    if (adminsResponse.error) throw adminsResponse.error;
 
-                // Fetch full profiles for admins
-                let adminMap = new Map();
-                if (adminRoles.length > 0) {
-                    const adminIds = adminRoles.map(r => r.user_id);
-                    const { data: adminProfiles } = await supabase
-                        .from("profiles")
-                        .select("*")
-                        .in("user_id", adminIds);
+                    const profiles = profilesResponse.data || [];
+                    const leaders = leadersResponse.data || [];
+                    const adminRoles = adminsResponse.data || [];
 
-                    if (adminProfiles) {
-                        adminProfiles.forEach(p => {
-                            if (p.state) adminMap.set(p.state, { ...p, role: adminRoles.find(r => r.user_id === p.user_id)?.role });
-                        });
-                    }
-                }
-                setStateAdmins(adminMap);
+                    // Fetch full profiles for admins
+                    let adminMap = new Map();
+                    if (adminRoles.length > 0) {
+                        const adminIds = adminRoles.map(r => r.user_id);
+                        const { data: adminProfiles } = await supabase
+                            .from("profiles")
+                            .select("*")
+                            .in("user_id", adminIds);
 
-                // map to store stats by prant
-                const prantStats = new Map<string, { memberCount: number; leaderCount: number; districts: Set<string>; districtBreakdown: Record<string, number> }>();
-
-                // Initialize all prants
-                PRANT_LIST.forEach(prant => {
-                    prantStats.set(prant, { memberCount: 0, leaderCount: 0, districts: new Set(), districtBreakdown: {} });
-                });
-
-                // Count profiles
-                profiles.forEach(p => {
-                    if (p.state && prantStats.has(p.state)) {
-                        const s = prantStats.get(p.state)!;
-                        s.memberCount++;
-                        if (p.district) {
-                            s.districts.add(p.district);
-                            s.districtBreakdown[p.district] = (s.districtBreakdown[p.district] || 0) + 1;
+                        if (adminProfiles) {
+                            adminProfiles.forEach(p => {
+                                if (p.state) adminMap.set(p.state, { ...p, role: adminRoles.find(r => r.user_id === p.user_id)?.role });
+                            });
                         }
                     }
-                });
 
-                // Count leaders
-                leaders.forEach(l => {
-                    if (l.prant && prantStats.has(l.prant)) {
-                        const s = prantStats.get(l.prant)!;
-                        s.leaderCount++;
-                        if (l.district) s.districts.add(l.district);
-                    }
-                });
+                    if (!isMounted) return;
+                    setStateAdmins(adminMap);
 
-                setDetailedStats(prantStats);
+                    // map to store stats by prant
+                    const prantStats = new Map<string, { memberCount: number; leaderCount: number; districts: Set<string>; districtBreakdown: Record<string, number> }>();
 
-                // Convert to array
-                const statsArray = Array.from(prantStats.entries()).map(([prant, data]) => ({
-                    prant,
-                    memberCount: data.memberCount,
-                    leaderCount: data.leaderCount,
-                    districts: data.districts.size
-                }));
+                    // Initialize all prants
+                    PRANT_LIST.forEach(prant => {
+                        prantStats.set(prant, { memberCount: 0, leaderCount: 0, districts: new Set(), districtBreakdown: {} });
+                    });
 
-                // Sort by activity (member count)
-                // Sort by activity (member count)
-                const sortedStats = statsArray.sort((a, b) => b.memberCount - a.memberCount);
+                    // Count profiles
+                    profiles.forEach(p => {
+                        if (p.state && prantStats.has(p.state)) {
+                            const s = prantStats.get(p.state)!;
+                            s.memberCount++;
+                            if (p.district) {
+                                s.districts.add(p.district);
+                                s.districtBreakdown[p.district] = (s.districtBreakdown[p.district] || 0) + 1;
+                            }
+                        }
+                    });
 
-                // Filter for State Admins
-                const isStateRole = ["STATE_CONVENER", "STATE_CO_CONVENER", "STATE_INCHARGE", "STATE_CO_INCHARGE"].includes(currentUserRole || "");
-                if (isStateRole && user?.email !== "savishkarindia@gmail.com") { // Ensure super admin email override still works just in case
-                    // We need the user's profile state. We can get it from 'stateAdmins' map or useAuth profile
-                    // But 'stateAdmins' implies admins of states.
-                    // Better: use the 'user' object from useAuth, but we need the profile state.
-                    // The component uses 'user' and 'currentUserRole'. Let's fetch profile state if needed or assume it's in context.
-                    // The 'fetchStats' function doesn't have access to 'profile' from props, but we can verify against 'activePrant' if we had it.
-                    // Actually, we can just look up the current user's state from the profiles fetch we just did!
+                    // Count leaders
+                    leaders.forEach(l => {
+                        if (l.prant && prantStats.has(l.prant)) {
+                            const s = prantStats.get(l.prant)!;
+                            s.leaderCount++;
+                            if (l.district) s.districts.add(l.district);
+                        }
+                    });
 
-                    const currentUserProfile = profiles.find(p => p.user_id === user?.id);
-                    if (currentUserProfile?.state) {
-                        setStats(sortedStats.filter(s => s.prant === currentUserProfile.state));
+                    setDetailedStats(prantStats);
+
+                    // Convert to array
+                    const statsArray = Array.from(prantStats.entries()).map(([prant, data]) => ({
+                        prant,
+                        memberCount: data.memberCount,
+                        leaderCount: data.leaderCount,
+                        districts: data.districts.size
+                    }));
+
+                    // Sort by activity (member count)
+                    const sortedStats = statsArray.sort((a, b) => b.memberCount - a.memberCount);
+
+                    // Filter for State Admins
+                    const isStateRole = ["STATE_CONVENER", "STATE_CO_CONVENER", "STATE_INCHARGE", "STATE_CO_INCHARGE"].includes(currentUserRole || "");
+                    if (isStateRole && user?.email !== "savishkarindia@gmail.com") {
+                        const currentUserProfile = profiles.find(p => p.user_id === user?.id);
+                        if (currentUserProfile?.state) {
+                            setStats(sortedStats.filter(s => s.prant === currentUserProfile.state));
+                        } else {
+                            setStats(sortedStats);
+                        }
                     } else {
                         setStats(sortedStats);
                     }
-                } else {
-                    setStats(sortedStats);
+                } catch (innerError) {
+                    console.warn("Real stats fetch failed, falling back to empty:", innerError);
+                    // Mock stats fallback or just empty
+                    // Keeping mock stats for now as fallback
+                    const mockStats = PRANT_LIST.map(prant => ({
+                        prant,
+                        memberCount: 0,
+                        leaderCount: 0,
+                        districts: 0
+                    }));
+                    setStats(mockStats);
                 }
-            } catch (innerError) {
-                console.warn("Real stats fetch failed, falling back to mock:", innerError);
-                // Mock stats fallback
-                const mockStats = PRANT_LIST.map(prant => ({
-                    prant,
-                    memberCount: 0,
-                    leaderCount: 0,
-                    districts: 0
-                }));
-                setStats(mockStats);
+            } catch (error) {
+                console.error("Error fetching stats:", error);
+            } finally {
+                if (isMounted) setLoading(false);
             }
-        } catch (error) {
-            console.error("Error fetching stats:", error);
-        } finally {
-            setLoading(false);
         }
-    }
+
+        fetchStats();
+
+        return () => { isMounted = false; };
+    }, [user, currentUserRole]);
 
     async function handleDismissAdmin(adminUserId: string, stateName: string) {
         if (!confirm(`Are you sure you want to dismiss the admin for ${stateName}?`)) return;

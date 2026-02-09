@@ -21,6 +21,7 @@ interface Profile {
   joined_year?: string | null; // Added joined_year
   id_card_issued_at: string | null;
   is_temporary_password?: boolean;
+  current_session_id?: string; // Added for session enforcement
 }
 
 interface AuthContextType {
@@ -44,12 +45,15 @@ function generateMembershipId(): string {
   return `SAV-MBR-${year}-${random}`;
 }
 
+import { useToast } from "@/hooks/use-toast";
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const fetchProfile = async (userId: string) => {
     if (!userId) return;
@@ -95,15 +99,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // 1. Setup Auth Listener (Run once)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Only update if session actually changed or on initial load
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
           setSession(session);
           setUser(session?.user ?? null);
 
           if (session?.user) {
+            // Fetch profile without triggering this effect again
             await fetchProfile(session.user.id);
+
+            // --- SINGLE SESSION ENFORCEMENT START ---
+            let currentBrowserSessionId = sessionStorage.getItem('savishkar_session_id');
+            if (!currentBrowserSessionId) {
+              currentBrowserSessionId = crypto.randomUUID();
+              sessionStorage.setItem('savishkar_session_id', currentBrowserSessionId);
+            }
+
+            // Update DB with this session ID
+            await supabase.from("profiles").update({
+              current_session_id: currentBrowserSessionId
+            } as any).eq("user_id", session.user.id);
+            // --- SINGLE SESSION ENFORCEMENT END ---
+
           } else {
             setProfile(null);
             setRole(null);
@@ -113,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setProfile(null);
           setRole(null);
+          sessionStorage.removeItem('savishkar_session_id');
         }
         setLoading(false);
       }
@@ -128,8 +148,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
+
+  // 2. Realtime Session Monitoring (Runs when user changes)
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase.channel(`session_monitor_${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const newProfile = payload.new as Profile;
+          const localSessionId = sessionStorage.getItem('savishkar_session_id');
+
+          if (newProfile.current_session_id && newProfile.current_session_id !== localSessionId) {
+            console.warn("Session invalidated by new login elsewhere.");
+            toast({
+              title: "Session Expired",
+              description: "You have been logged in on another device.",
+              variant: "destructive"
+            });
+            signOut();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]); // Only re-subscribe if user ID changes
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
