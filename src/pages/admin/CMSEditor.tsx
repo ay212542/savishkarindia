@@ -52,23 +52,36 @@ export default function CMSEditor() {
   }, []);
 
   async function fetchCMSBlocks() {
-    const { data, error } = await supabase
-      .from("cms_blocks")
-      .select("*");
+    setLoading(true);
+    try {
+      // 7-second timeout race
+      const fetchPromise = supabase.from("cms_blocks").select("*");
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out (7s)")), 7000)
+      );
 
-    if (error) {
-      console.error("Error fetching CMS blocks:", error);
-    } else {
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+      if (error) throw error;
+
       const blockMap: Record<string, CMSBlock> = {};
-      data?.forEach(block => {
+      data?.forEach((block: any) => {
         blockMap[block.section] = {
           ...block,
           content: parseCMSContent(block.content)
         };
       });
       setBlocks(blockMap);
+    } catch (error: any) {
+      console.error("Error fetching CMS blocks:", error);
+      toast({
+        title: "Error loading CMS",
+        description: error.message || "Could not load content. Please refresh.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   function startEditing(section: string) {

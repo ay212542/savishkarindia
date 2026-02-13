@@ -19,16 +19,38 @@ export default function SupportInbox() {
 
     async function fetchData() {
         setLoading(true);
-        const { data: t } = await supabase.from("support_tickets").select("*").order("created_at", { ascending: false });
-        const { data: i } = await supabase.from("ideas").select("*").order("created_at", { ascending: false });
+        try {
+            // Cast to any to bypass strict TableName checks if types are outdated
+            const fetchTickets = supabase.from("support_tickets" as any).select("*").order("created_at", { ascending: false });
+            const fetchIdeas = supabase.from("ideas" as any).select("*").order("created_at", { ascending: false });
 
-        if (t) setTickets(t);
-        if (i) setIdeas(i);
-        setLoading(false);
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Request timed out (7s)")), 7000)
+            );
+
+            const fetchAll = Promise.all([fetchTickets, fetchIdeas]);
+
+            const [ticketsRes, ideasRes] = await Promise.race([fetchAll, timeoutPromise]) as any;
+
+            if (ticketsRes.error) throw ticketsRes.error;
+            if (ideasRes.error) throw ideasRes.error;
+
+            setTickets(ticketsRes.data || []);
+            setIdeas(ideasRes.data || []);
+        } catch (error: any) {
+            console.error("Error fetching inbox:", error);
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load inbox",
+                variant: "destructive"
+            });
+        } finally {
+            setLoading(false);
+        }
     }
 
     async function updateStatus(table: "support_tickets" | "ideas", id: string, status: string) {
-        const { error } = await supabase.from(table).update({ status }).eq("id", id);
+        const { error } = await supabase.from(table as any).update({ status }).eq("id", id);
         if (!error) {
             toast({ title: "Status Updated" });
             fetchData();

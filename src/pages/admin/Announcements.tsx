@@ -19,6 +19,7 @@ interface Announcement {
   title: string;
   content: string;
   priority: string | null;
+  target_audience: "ALL" | "DESIGNATORY" | null;
   is_active: boolean;
   created_at: string;
   created_by: string | null;
@@ -40,6 +41,7 @@ export default function Announcements() {
     title: "",
     content: "",
     priority: "normal",
+    target_audience: "ALL",
     is_active: true
   });
   const { user } = useAuth();
@@ -50,17 +52,31 @@ export default function Announcements() {
   }, []);
 
   async function fetchAnnouncements() {
-    const { data, error } = await supabase
-      .from("announcements")
-      .select("*")
-      .order("created_at", { ascending: false });
+    setLoading(true);
+    try {
+      const fetchPromise = supabase
+        .from("announcements")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching announcements:", error);
-    } else {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out (7s)")), 7000)
+      );
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+      if (error) throw error;
       setAnnouncements(data || []);
+    } catch (error: any) {
+      console.error("Error fetching announcements:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load announcements",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   function openCreateDialog() {
@@ -69,6 +85,7 @@ export default function Announcements() {
       title: "",
       content: "",
       priority: "normal",
+      target_audience: "ALL",
       is_active: true
     });
     setShowDialog(true);
@@ -80,6 +97,7 @@ export default function Announcements() {
       title: announcement.title,
       content: announcement.content,
       priority: announcement.priority || "normal",
+      target_audience: announcement.target_audience || "ALL",
       is_active: announcement.is_active
     });
     setShowDialog(true);
@@ -94,32 +112,32 @@ export default function Announcements() {
     setSaving(true);
 
     try {
+      const payload = {
+        title: form.title,
+        content: form.content,
+        priority: form.priority,
+        target_audience: form.target_audience,
+        is_active: form.is_active
+      };
+
       if (editingAnnouncement) {
         const { error } = await supabase
           .from("announcements")
-          .update({
-            title: form.title,
-            content: form.content,
-            priority: form.priority,
-            is_active: form.is_active
-          })
+          .update(payload)
           .eq("id", editingAnnouncement.id);
 
         if (error) throw error;
 
         toast({ title: "Announcement Updated" });
-        
-        setAnnouncements(prev => prev.map(a => 
-          a.id === editingAnnouncement.id ? { ...a, ...form } : a
+
+        setAnnouncements(prev => prev.map(a =>
+          a.id === editingAnnouncement.id ? { ...a, ...payload, target_audience: payload.target_audience as any, id: a.id, created_at: a.created_at, created_by: a.created_by } : a
         ));
       } else {
         const { data, error } = await supabase
           .from("announcements")
           .insert({
-            title: form.title,
-            content: form.content,
-            priority: form.priority,
-            is_active: form.is_active,
+            ...payload,
             created_by: user?.id
           })
           .select()
@@ -128,7 +146,7 @@ export default function Announcements() {
         if (error) throw error;
 
         toast({ title: "Announcement Created" });
-        setAnnouncements(prev => [data, ...prev]);
+        setAnnouncements(prev => [data as Announcement, ...prev]);
       }
 
       setShowDialog(false);
@@ -168,7 +186,7 @@ export default function Announcements() {
 
       if (error) throw error;
 
-      setAnnouncements(prev => prev.map(a => 
+      setAnnouncements(prev => prev.map(a =>
         a.id === announcement.id ? { ...a, is_active: !a.is_active } : a
       ));
     } catch (error) {
@@ -208,7 +226,7 @@ export default function Announcements() {
           {announcements.map((announcement, index) => {
             const priority = announcement.priority as keyof typeof PRIORITY_STYLES || "normal";
             const PriorityIcon = PRIORITY_STYLES[priority].icon;
-            
+
             return (
               <motion.div
                 key={announcement.id}
@@ -221,7 +239,7 @@ export default function Announcements() {
                     <div className={`p-3 rounded-xl ${PRIORITY_STYLES[priority].bg}`}>
                       <PriorityIcon className={`w-5 h-5 ${PRIORITY_STYLES[priority].text}`} />
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-display font-semibold">{announcement.title}</h3>
@@ -229,6 +247,11 @@ export default function Announcements() {
                           {announcement.is_active ? "Active" : "Inactive"}
                         </Badge>
                         <Badge variant="outline" className="capitalize">{priority}</Badge>
+                        {announcement.target_audience === "DESIGNATORY" && (
+                          <Badge variant="secondary" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
+                            Designatory Only
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">{announcement.content}</p>
                       <p className="text-xs text-muted-foreground">
@@ -265,7 +288,7 @@ export default function Announcements() {
               Announcements will be displayed on member dashboards
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <Label>Title *</Label>
@@ -275,7 +298,7 @@ export default function Announcements() {
                 placeholder="Announcement title"
               />
             </div>
-            
+
             <div>
               <Label>Content *</Label>
               <Textarea
@@ -286,21 +309,39 @@ export default function Announcements() {
               />
             </div>
 
-            <div>
-              <Label>Priority</Label>
-              <Select 
-                value={form.priority} 
-                onValueChange={(v) => setForm(prev => ({ ...prev, priority: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="high">High (Urgent)</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Priority</Label>
+                <Select
+                  value={form.priority}
+                  onValueChange={(v) => setForm(prev => ({ ...prev, priority: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High (Urgent)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Target Audience</Label>
+                <Select
+                  value={form.target_audience}
+                  onValueChange={(v) => setForm(prev => ({ ...prev, target_audience: v as any }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Members</SelectItem>
+                    <SelectItem value="DESIGNATORY">Designatory / Admins</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">

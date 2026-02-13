@@ -37,17 +37,31 @@ export default function StoriesManager() {
     }, []);
 
     async function fetchStories() {
-        const { data, error } = await supabase
-            .from("stories")
-            .select("*")
-            .order("created_at", { ascending: false });
+        setLoading(true);
+        try {
+            const fetchPromise = supabase
+                .from("stories")
+                .select("*")
+                .order("created_at", { ascending: false });
 
-        if (error) {
-            console.error("Error fetching stories:", error);
-        } else {
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Request timed out (7s)")), 7000)
+            );
+
+            const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+            if (error) throw error;
             setStories(data as any || []);
+        } catch (error: any) {
+            console.error("Error fetching stories:", error);
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load stories",
+                variant: "destructive"
+            });
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }
 
     async function handleSave() {
@@ -163,7 +177,7 @@ export default function StoriesManager() {
                             {/* Note: ImageUpload component might not support video natively yet. If not, we assume images mainly for now, or update it. */}
                             {/* Assuming ImageUpload handles files generically or we rename it later */}
                             <ImageUpload
-                                bucket="stories"
+                                bucket={"stories" as any}
                                 folder="uploads"
                                 onUpload={(url) => setForm({ ...form, media_url: url })}
                                 currentImage={form.media_url}
