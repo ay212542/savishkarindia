@@ -152,7 +152,11 @@ export default function Announcements() {
       setShowDialog(false);
     } catch (error) {
       console.error("Save error:", error);
-      toast({ title: "Error", description: "Failed to save announcement", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: (error as any).message || "Failed to save announcement",
+        variant: "destructive"
+      });
     }
 
     setSaving(false);

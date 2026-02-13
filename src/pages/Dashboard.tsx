@@ -11,6 +11,7 @@ import { ROLE_LABELS } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ForcePasswordChange from "@/components/auth/ForcePasswordChange";
+import { AnnouncementsList } from "@/components/dashboard/AnnouncementsList";
 
 export default function Dashboard() {
   const { user, profile, role, isAdmin, loading, refreshProfile } = useAuth();
@@ -215,20 +216,13 @@ export default function Dashboard() {
           </GlassCard>
 
           {/* Announcements */}
-          <GlassCard className={cmsContent.announcement_banner ? "border-primary/50" : ""}>
+          <GlassCard className="border-primary/50">
             <div className="flex items-center gap-3 mb-4">
               <Bell className="w-6 h-6 text-accent" />
               <h3 className="font-display text-lg font-semibold">Announcements</h3>
             </div>
-            {cmsContent.announcement_banner ? (
-              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
-                <p className="text-sm font-medium">{cmsContent.announcement_banner}</p>
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">
-                No new announcements at this time.
-              </p>
-            )}
+
+            <AnnouncementsList role={role} />
           </GlassCard>
 
           {/* Featured / Upcoming Events */}
