@@ -56,23 +56,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   const fetchProfile = async (userId: string) => {
+    console.log("fetchProfile called for:", userId);
     if (!userId) return;
     try {
-      const { data: profileData } = await supabase
+      console.log("Fetching profile from DB...");
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", userId)
         .single();
 
+      if (profileError) {
+        console.error("Profile DB Error:", profileError);
+      } else {
+        console.log("Profile data received:", profileData ? "Found" : "Null");
+      }
+
       if (profileData) {
         setProfile(profileData as Profile);
       }
 
-      const { data: roleData } = await supabase
+      console.log("Fetching user role...");
+      const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
         .single();
+
+      if (roleError) {
+        console.warn("Role DB Error (might be empty):", roleError);
+      } else {
+        console.log("Role data received:", roleData);
+      }
 
       let finalRole = roleData?.role as AppRole | null;
 
@@ -90,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error fetching profile:", error);
     }
+    console.log("fetchProfile completed");
   };
 
   const refreshProfile = async () => {
@@ -102,13 +118,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 1. Setup Auth Listener (Run once)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log(`Auth event: ${event}`, session?.user?.id);
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
           setSession(session);
           setUser(session?.user ?? null);
 
           if (session?.user) {
             // Fetch profile without triggering this effect again
-            await fetchProfile(session.user.id);
+            console.log("Fetching profile for user:", session.user.id);
+            try {
+              await fetchProfile(session.user.id);
+              console.log("Profile fetch complete");
+            } catch (err) {
+              console.error("Profile fetch failed in listener:", err);
+            }
 
             // --- SINGLE SESSION ENFORCEMENT START ---
             let currentBrowserSessionId = sessionStorage.getItem('savishkar_session_id');
@@ -118,9 +141,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             // Update DB with this session ID
-            await supabase.from("profiles").update({
+            // Run this in background, don't await blocking loading state
+            supabase.from("profiles").update({
               current_session_id: currentBrowserSessionId
-            } as any).eq("user_id", session.user.id);
+            } as any).eq("user_id", session.user.id).then(({ error }) => {
+              if (error) console.error("Error updating session ID:", error);
+            });
             // --- SINGLE SESSION ENFORCEMENT END ---
 
           } else {
@@ -140,16 +166,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Initial check
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log("Initial getSession:", session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        await fetchProfile(session.user.id);
+        try {
+          await fetchProfile(session.user.id);
+        } catch (err) {
+          console.error("Profile fetch failed in initial check:", err);
+        }
       }
       setLoading(false);
     });
 
+    // Safety timeout to prevent infinite loading
+    const timer = setTimeout(() => {
+      setLoading((currentLoading) => {
+        if (currentLoading) {
+          console.warn("Auth check timed out, forcing loading false");
+          return false;
+        }
+        return currentLoading;
+      });
+    }, 8000);
+
     return () => {
       subscription.unsubscribe();
+      clearTimeout(timer);
     };
   }, []);
 
