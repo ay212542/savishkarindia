@@ -8,7 +8,7 @@ import { Loader2, Calendar, Newspaper, ChevronRight, X, PlayCircle, Image as Ima
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 interface MediaItem {
@@ -150,73 +150,70 @@ export default function News() {
                                         </DialogTrigger>
 
                                         <DialogContent className="sm:max-w-4xl max-h-[90vh] p-0 overflow-hidden flex flex-col bg-background/95 backdrop-blur-xl border-border">
-                                            <div className="relative flex-1 overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-auto">
-                                                {/* content Scroll Area */}
-                                                <ScrollArea className="flex-1 h-full max-h-[90vh]">
-                                                    <div className="p-6 md:p-8 space-y-6">
-                                                        <div>
-                                                            <h2 className="text-3xl md:text-4xl font-display font-bold text-gradient-gold mb-4">
-                                                                {item.title}
-                                                            </h2>
-                                                            <div className="flex items-center text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
-                                                                <Calendar className="w-4 h-4 mr-2" />
-                                                                {new Date(item.created_at).toLocaleDateString(undefined, {
-                                                                    weekday: 'long',
-                                                                    year: 'numeric',
-                                                                    month: 'long',
-                                                                    day: 'numeric'
-                                                                })}
-                                                            </div>
-
-                                                            {/* Content */}
-                                                            <div className="prose prose-lg dark:prose-invert max-w-none">
-                                                                <p className="whitespace-pre-line leading-relaxed text-muted-foreground">
-                                                                    {item.content}
-                                                                </p>
-                                                            </div>
+                                            <div className="flex-1 overflow-y-auto">
+                                                <div className="p-6 md:p-8 space-y-6">
+                                                    <div>
+                                                        <h2 className="text-3xl md:text-4xl font-display font-bold text-gradient-gold mb-4">
+                                                            {item.title}
+                                                        </h2>
+                                                        <div className="flex items-center text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
+                                                            <Calendar className="w-4 h-4 mr-2" />
+                                                            {new Date(item.created_at).toLocaleDateString(undefined, {
+                                                                weekday: 'long',
+                                                                year: 'numeric',
+                                                                month: 'long',
+                                                                day: 'numeric'
+                                                            })}
                                                         </div>
 
-                                                        {/* Media Gallery */}
-                                                        <div className="space-y-4 pt-6">
-                                                            <h4 className="font-semibold text-lg flex items-center gap-2">
-                                                                <ImageIcon className="w-5 h-5 text-primary" />
-                                                                Gallery
-                                                            </h4>
-
-                                                            <div className="grid grid-cols-1 gap-4">
-                                                                {/* Main Image */}
-                                                                {item.image_url && (
-                                                                    <div className="rounded-xl overflow-hidden border border-border/50 shadow-sm">
-                                                                        <img
-                                                                            src={item.image_url}
-                                                                            alt={item.title}
-                                                                            className="w-full h-auto object-contain max-h-[600px] bg-black/5"
-                                                                        />
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Extra Media */}
-                                                                {item.media?.map((media, idx) => (
-                                                                    <div key={idx} className="rounded-xl overflow-hidden border border-border/50 shadow-sm bg-black/5">
-                                                                        {media.type === 'video' ? (
-                                                                            <video
-                                                                                src={media.url}
-                                                                                controls
-                                                                                className="w-full h-auto max-h-[600px]"
-                                                                            />
-                                                                        ) : (
-                                                                            <img
-                                                                                src={media.url}
-                                                                                alt={`Gallery ${idx + 1}`}
-                                                                                className="w-full h-auto object-contain max-h-[600px]"
-                                                                            />
-                                                                        )}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
+                                                        {/* Content */}
+                                                        <div className="prose prose-lg dark:prose-invert max-w-none">
+                                                            <p className="whitespace-pre-line leading-relaxed text-muted-foreground">
+                                                                {item.content}
+                                                            </p>
                                                         </div>
                                                     </div>
-                                                </ScrollArea>
+
+                                                    {/* Media Gallery */}
+                                                    <div className="space-y-4 pt-6">
+                                                        <h4 className="font-semibold text-lg flex items-center gap-2">
+                                                            <ImageIcon className="w-5 h-5 text-primary" />
+                                                            Gallery
+                                                        </h4>
+
+                                                        <div className="grid grid-cols-1 gap-4">
+                                                            {/* Main Image */}
+                                                            {item.image_url && (
+                                                                <div className="rounded-xl overflow-hidden border border-border/50 shadow-sm">
+                                                                    <img
+                                                                        src={item.image_url}
+                                                                        alt={item.title}
+                                                                        className="w-full h-auto object-contain max-h-[600px] bg-black/5"
+                                                                    />
+                                                                </div>
+                                                            )}
+
+                                                            {/* Extra Media */}
+                                                            {item.media?.map((media, idx) => (
+                                                                <div key={idx} className="rounded-xl overflow-hidden border border-border/50 shadow-sm bg-black/5">
+                                                                    {media.type === 'video' ? (
+                                                                        <video
+                                                                            src={media.url}
+                                                                            controls
+                                                                            className="w-full h-auto max-h-[600px]"
+                                                                        />
+                                                                    ) : (
+                                                                        <img
+                                                                            src={media.url}
+                                                                            alt={`Gallery ${idx + 1}`}
+                                                                            className="w-full h-auto object-contain max-h-[600px]"
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </DialogContent>
                                     </Dialog>
