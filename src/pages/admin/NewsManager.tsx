@@ -103,18 +103,59 @@ export default function NewsManager() {
         }
     };
 
+    const compressImage = async (file: File): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    const MAX_WIDTH = 1200;
+                    const scaleSize = MAX_WIDTH / img.width;
+                    const width = Math.min(MAX_WIDTH, img.width);
+                    const height = img.height * (scaleSize < 1 ? scaleSize : 1);
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx?.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            const newFile = new File([blob], file.name, {
+                                type: "image/jpeg",
+                                lastModified: Date.now(),
+                            });
+                            resolve(newFile);
+                        } else {
+                            reject(new Error("Compression failed"));
+                        }
+                    }, "image/jpeg", 0.7); // 70% quality
+                };
+                img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
     const uploadImage = async (): Promise<string | null> => {
         if (!imageFile) return null;
 
         try {
             setUploading(true);
-            const fileExt = imageFile.name.split(".").pop();
+
+            // Compress image before upload
+            const compressedFile = await compressImage(imageFile);
+
+            const fileExt = "jpg";
             const fileName = `${Date.now()}.${fileExt}`;
             const filePath = `${fileName}`;
 
             const { error: uploadError } = await supabase.storage
                 .from("news_images")
-                .upload(filePath, imageFile);
+                .upload(filePath, compressedFile);
 
             if (uploadError) throw uploadError;
 
@@ -164,31 +205,42 @@ export default function NewsManager() {
                 content: formData.content,
                 image_url: imageUrl,
                 updated_at: new Date().toISOString(),
+                is_published: true // Default to published
             };
 
             if (editingItem) {
                 // Update
-                const { error } = await supabase
+                const { data, error } = await supabase
                     .from("news")
                     .update(newsData)
-                    .eq("id", editingItem.id);
+                    .eq("id", editingItem.id)
+                    .select()
+                    .single();
 
                 if (error) throw error;
+
+                // Update local state directly
+                setNews(prev => prev.map(item => item.id === editingItem.id ? data : item));
                 toast({ title: "Success", description: "News item updated successfully." });
             } else {
                 // Create
-                const { error } = await supabase
+                const { data, error } = await supabase
                     .from("news")
-                    .insert([{ ...newsData, created_by: user?.id }]);
+                    .insert([{ ...newsData, created_by: user?.id }])
+                    .select()
+                    .single();
 
                 if (error) throw error;
+
+                // Append to local state directly (prepend for newest first)
+                setNews(prev => [data, ...prev]);
                 toast({ title: "Success", description: "News item created successfully." });
             }
 
-            // Reset & Refresh
+            // Reset
             setIsDialogOpen(false);
             resetForm();
-            fetchNews();
+            // Removed fetchNews() to speed up UI response
         } catch (error) {
             console.error("Error saving news:", error);
             toast({
@@ -203,11 +255,19 @@ export default function NewsManager() {
 
     const handleDelete = async (id: string) => {
         try {
+            // Optimistic update
+            const previousNews = [...news];
+            setNews(prev => prev.filter(item => item.id !== id));
+
             const { error } = await supabase.from("news").delete().eq("id", id);
-            if (error) throw error;
+
+            if (error) {
+                // Revert if failed
+                setNews(previousNews);
+                throw error;
+            }
 
             toast({ title: "Deleted", description: "News item removed." });
-            fetchNews();
         } catch (error) {
             console.error("Error deleting news:", error);
             toast({
