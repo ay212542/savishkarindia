@@ -41,6 +41,7 @@ const CollaborationsManager = React.lazy(() => import("./pages/admin/Collaborati
 const StoriesManager = React.lazy(() => import("./pages/admin/StoriesManager"));
 const AlumniManager = React.lazy(() => import("./pages/admin/AlumniManager"));
 const SupportInbox = React.lazy(() => import("./pages/admin/SupportInbox"));
+const NewsManager = React.lazy(() => import("./pages/admin/NewsManager"));
 
 const MoUTemplates = React.lazy(() => import("./pages/resources/MoUTemplates"));
 const Margdarshika = React.lazy(() => import("./pages/resources/Margdarshika"));
@@ -98,6 +99,7 @@ const App = () => (
                 <Route path="collaborations" element={<CollaborationsManager />} />
                 <Route path="stories" element={<StoriesManager />} />
                 <Route path="alumni" element={<AlumniManager />} />
+                <Route path="news" element={<NewsManager />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

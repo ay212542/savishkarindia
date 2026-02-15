@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ForcePasswordChange from "@/components/auth/ForcePasswordChange";
 import { AnnouncementsList } from "@/components/dashboard/AnnouncementsList";
+import { NewsList } from "@/components/dashboard/NewsList";
+import { Newspaper } from "lucide-react";
 
 export default function Dashboard() {
   const { user, profile, role, isAdmin, loading, refreshProfile } = useAuth();
@@ -223,6 +225,15 @@ export default function Dashboard() {
             </div>
 
             <AnnouncementsList role={role} />
+          </GlassCard>
+
+          {/* News Section */}
+          <GlassCard className="border-orange-500/50">
+            <div className="flex items-center gap-3 mb-4">
+              <Newspaper className="w-6 h-6 text-orange-500" />
+              <h3 className="font-display text-lg font-semibold">Latest News</h3>
+            </div>
+            <NewsList />
           </GlassCard>
 
           {/* Featured / Upcoming Events */}

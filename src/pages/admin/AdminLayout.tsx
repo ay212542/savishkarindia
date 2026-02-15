@@ -30,6 +30,7 @@ const sidebarItems = [
   { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
 
   { href: "/admin/cms", label: "CMS Editor", icon: Palette },
+  { href: "/admin/news", label: "News Section", icon: Megaphone },
   { href: "/admin/ai-panel", label: "AI Maintenance", icon: Bot },
   { href: "/admin/chat-history", label: "AI Chat History", icon: MessageSquare },
   { href: "/admin/support", label: "Inbox (Support/Ideas)", icon: MessageSquare },
