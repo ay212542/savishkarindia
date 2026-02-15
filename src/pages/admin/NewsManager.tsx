@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +22,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Plus, Pencil, Trash2, Image as ImageIcon, Save, X } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Image as ImageIcon, Save, X, Video, Upload, FileVideo } from "lucide-react";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -34,12 +35,19 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+// Define Media Type
+interface MediaItem {
+    type: "image" | "video";
+    url: string;
+}
+
 // Define News Item Type
 interface NewsItem {
     id: string;
     title: string;
     content: string;
     image_url: string | null;
+    media: MediaItem[] | null;
     is_published: boolean | null;
     created_at: string;
 }
@@ -58,7 +66,11 @@ export default function NewsManager() {
         content: "",
         image_url: "",
     });
+    const [mediaFiles, setMediaFiles] = useState<{ file: File, type: "image" | "video" }[]>([]);
+    const [existingMedia, setExistingMedia] = useState<MediaItem[]>([]);
     const [uploading, setUploading] = useState(false);
+
+    // Legacy single image file state (kept for backward compatibility or main thumbnail)
     const [imageFile, setImageFile] = useState<File | null>(null);
 
     // STRICT ACCESS CONTROL: Only Super Controller or specific admin email
@@ -79,7 +91,14 @@ export default function NewsManager() {
                 .order("created_at", { ascending: false });
 
             if (error) throw error;
-            setNews(data || []);
+
+            // Cast media column properly
+            const formattedData: NewsItem[] = (data || []).map(item => ({
+                ...item,
+                media: item.media ? (item.media as any as MediaItem[]) : []
+            }));
+
+            setNews(formattedData);
         } catch (error) {
             console.error("Error fetching news:", error);
             toast({
@@ -101,6 +120,21 @@ export default function NewsManager() {
         if (e.target.files && e.target.files[0]) {
             setImageFile(e.target.files[0]);
         }
+    };
+
+    const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
+        if (e.target.files && e.target.files.length > 0) {
+            const newFiles = Array.from(e.target.files).map(file => ({ file, type }));
+            setMediaFiles(prev => [...prev, ...newFiles]);
+        }
+    };
+
+    const removeMediaFile = (index: number) => {
+        setMediaFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const removeExistingMedia = (index: number) => {
+        setExistingMedia(prev => prev.filter((_, i) => i !== index));
     };
 
     const compressImage = async (file: File): Promise<File> => {
@@ -140,40 +174,22 @@ export default function NewsManager() {
         });
     };
 
-    const uploadImage = async (): Promise<string | null> => {
-        if (!imageFile) return null;
-
+    const uploadFile = async (file: File, path: string): Promise<string | null> => {
         try {
-            setUploading(true);
-
-            // Compress image before upload
-            const compressedFile = await compressImage(imageFile);
-
-            const fileExt = "jpg";
-            const fileName = `${Date.now()}.${fileExt}`;
-            const filePath = `${fileName}`;
-
             const { error: uploadError } = await supabase.storage
                 .from("news_images")
-                .upload(filePath, compressedFile);
+                .upload(path, file);
 
             if (uploadError) throw uploadError;
 
             const { data } = supabase.storage
                 .from("news_images")
-                .getPublicUrl(filePath);
+                .getPublicUrl(path);
 
             return data.publicUrl;
         } catch (error) {
-            console.error("Error uploading image:", error);
-            toast({
-                title: "Upload Failed",
-                description: "Could not upload the image. Please try again.",
-                variant: "destructive",
-            });
+            console.error("Upload error:", error);
             return null;
-        } finally {
-            setUploading(false);
         }
     };
 
@@ -192,21 +208,50 @@ export default function NewsManager() {
 
         try {
             setUploading(true);
-            let imageUrl = formData.image_url;
+            let mainImageUrl = formData.image_url;
 
-            // Upload new image if selected
+            // 1. Upload Main Image (if new one selected)
             if (imageFile) {
-                const uploadedUrl = await uploadImage();
-                if (uploadedUrl) imageUrl = uploadedUrl;
+                const compressedFile = await compressImage(imageFile);
+                const fileName = `main_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+                const uploadedUrl = await uploadFile(compressedFile, fileName);
+                if (uploadedUrl) mainImageUrl = uploadedUrl;
             }
+
+            // 2. Upload Additional Media
+            const newMediaUrls: MediaItem[] = [];
+            for (const media of mediaFiles) {
+                let fileToUpload = media.file;
+                let fileExt = media.file.name.split('.').pop();
+
+                // Compress images but NOT videos
+                if (media.type === 'image') {
+                    fileToUpload = await compressImage(media.file);
+                    fileExt = 'jpg';
+                }
+
+                const fileName = `gallery_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const url = await uploadFile(fileToUpload, fileName);
+
+                if (url) {
+                    newMediaUrls.push({ type: media.type, url });
+                }
+            }
+
+            // Combine existing and new media
+            // IMPORTANT: cast to any to satisfy JSONB type requirement for Supabase
+            const allMedia = [...existingMedia, ...newMediaUrls] as any;
 
             const newsData = {
                 title: formData.title,
                 content: formData.content,
-                image_url: imageUrl,
+                image_url: mainImageUrl,
+                media: allMedia,
                 updated_at: new Date().toISOString(),
-                is_published: true // Default to published
+                is_published: true
             };
+
+            let savedData;
 
             if (editingItem) {
                 // Update
@@ -218,9 +263,8 @@ export default function NewsManager() {
                     .single();
 
                 if (error) throw error;
+                savedData = data;
 
-                // Update local state directly
-                setNews(prev => prev.map(item => item.id === editingItem.id ? data : item));
                 toast({ title: "Success", description: "News item updated successfully." });
             } else {
                 // Create
@@ -231,16 +275,26 @@ export default function NewsManager() {
                     .single();
 
                 if (error) throw error;
+                savedData = data;
 
-                // Append to local state directly (prepend for newest first)
-                setNews(prev => [data, ...prev]);
                 toast({ title: "Success", description: "News item created successfully." });
             }
 
-            // Reset
+            // Update local state with proper type casting
+            const formattedItem: NewsItem = {
+                ...savedData,
+                media: savedData.media ? (savedData.media as any as MediaItem[]) : []
+            };
+
+            if (editingItem) {
+                setNews(prev => prev.map(item => item.id === editingItem.id ? formattedItem : item));
+            } else {
+                setNews(prev => [formattedItem, ...prev]);
+            }
+
             setIsDialogOpen(false);
             resetForm();
-            // Removed fetchNews() to speed up UI response
+
         } catch (error) {
             console.error("Error saving news:", error);
             toast({
@@ -262,7 +316,6 @@ export default function NewsManager() {
             const { error } = await supabase.from("news").delete().eq("id", id);
 
             if (error) {
-                // Revert if failed
                 setNews(previousNews);
                 throw error;
             }
@@ -281,6 +334,8 @@ export default function NewsManager() {
     const resetForm = () => {
         setFormData({ title: "", content: "", image_url: "" });
         setImageFile(null);
+        setMediaFiles([]);
+        setExistingMedia([]);
         setEditingItem(null);
     };
 
@@ -291,6 +346,8 @@ export default function NewsManager() {
             content: item.content,
             image_url: item.image_url || "",
         });
+        setExistingMedia(item.media || []);
+        setMediaFiles([]); // Clear pending files
         setIsDialogOpen(true);
     };
 
@@ -321,75 +378,146 @@ export default function NewsManager() {
                             Add News
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>{editingItem ? "Edit News" : "Add News"}</DialogTitle>
                         </DialogHeader>
-                        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Title</label>
-                                <Input
-                                    name="title"
-                                    placeholder="Enter news headline..."
-                                    value={formData.title}
-                                    onChange={handleInputChange}
-                                    required
-                                />
+                        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+
+                            {/* Title & Content */}
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Title</label>
+                                    <Input
+                                        name="title"
+                                        placeholder="Enter news headline..."
+                                        value={formData.title}
+                                        onChange={handleInputChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Content</label>
+                                    <Textarea
+                                        name="content"
+                                        placeholder="Enter full news content..."
+                                        value={formData.content}
+                                        onChange={handleInputChange}
+                                        className="min-h-[120px]"
+                                        required
+                                    />
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Content</label>
-                                <Textarea
-                                    name="content"
-                                    placeholder="Enter full news content..."
-                                    value={formData.content}
-                                    onChange={handleInputChange}
-                                    className="min-h-[150px]"
-                                    required
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Image (Optional)</label>
+                            {/* Main Thumbnail */}
+                            <div className="space-y-2 border-t border-border pt-4">
+                                <label className="text-sm font-medium">Main Thumbnail (Required)</label>
                                 <div className="flex gap-4 items-start">
                                     <div className="flex-1">
                                         <Input
                                             type="file"
-                                            id="image-upload" // Added ID for label
                                             accept="image/*"
                                             onChange={handleImageSelect}
-                                            className="cursor-pointer file:cursor-pointer file:text-primary file:font-semibold"
+                                            className="cursor-pointer"
                                         />
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Upload an image for the news thumbnail.
-                                        </p>
                                     </div>
                                     {(formData.image_url || imageFile) && (
-                                        <div className="w-16 h-16 rounded-md overflow-hidden border border-border relative group">
+                                        <div className="w-20 h-20 rounded-md overflow-hidden border border-border relative bg-muted">
                                             <img
                                                 src={imageFile ? URL.createObjectURL(imageFile) : formData.image_url}
                                                 alt="Preview"
                                                 className="w-full h-full object-cover"
                                             />
-                                            {/* Only allow removing if it's set */}
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setFormData(prev => ({ ...prev, image_url: "" }));
-                                                    setImageFile(null);
-                                                }}
-                                                className="absolute inset-0 bg-black/50 items-center justify-center hidden group-hover:flex"
-                                            >
-                                                <X className="w-4 h-4 text-white" />
-                                            </button>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
+                            {/* Gallery Uploads */}
+                            <div className="space-y-4 border-t border-border pt-4">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-medium">Gallery (Images & Videos)</label>
+                                    <div className="flex gap-2">
+                                        <div className="relative">
+                                            <input
+                                                type="file"
+                                                multiple
+                                                accept="image/*"
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                onChange={(e) => handleMediaSelect(e, 'image')}
+                                            />
+                                            <Button type="button" variant="outline" size="sm" className="gap-2">
+                                                <ImageIcon className="w-4 h-4" /> Add Images
+                                            </Button>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="file"
+                                                multiple
+                                                accept="video/*"
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                onChange={(e) => handleMediaSelect(e, 'video')}
+                                            />
+                                            <Button type="button" variant="outline" size="sm" className="gap-2">
+                                                <Video className="w-4 h-4" /> Add Videos
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Preview Grid */}
+                                <div className="grid grid-cols-3 gap-4">
+                                    {/* Existing Media */}
+                                    {existingMedia.map((media, index) => (
+                                        <div key={`existing-${index}`} className="relative group aspect-video rounded-md overflow-hidden bg-muted border border-border">
+                                            {media.type === 'video' ? (
+                                                <div className="w-full h-full flex items-center justify-center bg-black/10">
+                                                    <FileVideo className="w-8 h-8 text-foreground/50" />
+                                                </div>
+                                            ) : (
+                                                <img src={media.url} alt="Gallery" className="w-full h-full object-cover" />
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => removeExistingMedia(index)}
+                                                className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                            <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/60 text-[10px] text-white rounded">
+                                                Existing
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {/* New Files */}
+                                    {mediaFiles.map((item, index) => (
+                                        <div key={`new-${index}`} className="relative group aspect-video rounded-md overflow-hidden bg-muted border border-border">
+                                            {item.type === 'video' ? (
+                                                <div className="w-full h-full flex items-center justify-center bg-black/10">
+                                                    <FileVideo className="w-8 h-8 text-foreground/50" />
+                                                </div>
+                                            ) : (
+                                                <img src={URL.createObjectURL(item.file)} alt="Preview" className="w-full h-full object-cover" />
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => removeMediaFile(index)}
+                                                className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                            <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-green-500/80 text-[10px] text-white rounded">
+                                                New
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             <Button
                                 type="submit"
-                                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 mt-6"
                                 disabled={uploading}
                             >
                                 {uploading ? (
@@ -414,8 +542,9 @@ export default function NewsManager() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Image</TableHead>
+                                <TableHead>Thumbnail</TableHead>
                                 <TableHead>Title & Content</TableHead>
+                                <TableHead>Gallery</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -423,14 +552,14 @@ export default function NewsManager() {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={5} className="h-24 text-center">
                                         <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                                         <span className="text-xs text-muted-foreground mt-2 block">Loading news...</span>
                                     </TableCell>
                                 </TableRow>
                             ) : news.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                                         No news items found. Create one to get started.
                                     </TableCell>
                                 </TableRow>
@@ -455,6 +584,15 @@ export default function NewsManager() {
                                         <TableCell className="max-w-md">
                                             <div className="font-semibold text-foreground truncate">{item.title}</div>
                                             <div className="text-sm text-muted-foreground truncate">{item.content}</div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {item.media && item.media.length > 0 ? (
+                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary text-secondary-foreground">
+                                                    {item.media.length} items
+                                                </span>
+                                            ) : (
+                                                <span className="text-muted-foreground text-xs">-</span>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                                             {new Date(item.created_at).toLocaleDateString()}

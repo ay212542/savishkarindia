@@ -46,6 +46,7 @@ const NewsManager = React.lazy(() => import("./pages/admin/NewsManager"));
 const MoUTemplates = React.lazy(() => import("./pages/resources/MoUTemplates"));
 const Margdarshika = React.lazy(() => import("./pages/resources/Margdarshika"));
 const Brochures = React.lazy(() => import("./pages/resources/Brochures"));
+const News = React.lazy(() => import("./pages/News"));
 
 
 import Support from "./pages/Support"; // Keep public pages eager loaded if critical, or lazy if large
@@ -66,6 +67,7 @@ const App = () => (
               <Route path="/leadership" element={<Leadership />} />
               <Route path="/programs" element={<Programs />} />
               <Route path="/join" element={<Join />} />
+              <Route path="/news" element={<News />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/id-card" element={<IDCard />} />

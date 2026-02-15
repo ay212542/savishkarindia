@@ -218,6 +218,7 @@ export type Database = {
           title: string
           content: string
           image_url: string | null
+          media: Json | null
           is_published: boolean | null
           created_by: string | null
           created_at: string
@@ -228,6 +229,7 @@ export type Database = {
           title: string
           content: string
           image_url?: string | null
+          media?: Json | null
           is_published?: boolean | null
           created_by?: string | null
           created_at?: string
@@ -238,6 +240,7 @@ export type Database = {
           title?: string
           content?: string
           image_url?: string | null
+          media?: Json | null
           is_published?: boolean | null
           created_by?: string | null
           created_at?: string
