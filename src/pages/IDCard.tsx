@@ -244,12 +244,12 @@ export default function IDCard() {
               className={`id-card ${templateStyles[selectedTemplate]} p-6 relative`}
               style={{ width: "100%", maxWidth: "428px", aspectRatio: "1.586" }}
             >
-              {/* Watermark */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
+              {/* Watermark — commented out */}
+              {/* <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
                 <span className="font-display text-4xl font-bold tracking-widest transform rotate-[-30deg]">
                   SAVISHKAR INDIA
                 </span>
-              </div>
+              </div> */}
 
               {/* Background gradient */}
               <div className={`absolute inset-0 bg-gradient-to-br ${templateGradients[selectedTemplate]} rounded-2xl`} />
