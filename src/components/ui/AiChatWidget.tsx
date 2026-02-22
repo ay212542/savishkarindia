@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { GoogleGenAI } from "@google/genai";
 
 interface Message {
     id: string;
@@ -57,33 +58,41 @@ export function AiChatWidget() {
         setLoading(true);
 
         try {
-            // Attempt to call the AI Edge Function
+            // Check for API key in environment
+            const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
             let aiResponse = "";
-            try {
-                const { data, error } = await supabase.functions.invoke("ai-assistant", {
-                    body: {
-                        action: "chat",
-                        prompt: userMessage,
-                        content: `You are an elite Business Innovation Consultant for SAVISHKAR India. 
-                    Your expertise includes: Startups, Entrepreneurship, Government Schemes (Startup India), Funding, Scaling, and Business Strategy.
-                    Answer with professional, high-value insights. Use bullet points for clarity. 
-                    If a question is completely unrelated to business/innovation, politely refocus the user to SAVISHKAR's mission.`
-                    }
-                });
 
-                if (error) {
-                    console.warn("AI Function Error (Fall back to mock):", error);
-                    throw error;
+            if (geminiApiKey) {
+                try {
+                    // Initialize the real Gemini AI model
+                    const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+
+                    const systemPrompt = `You are an elite Business Innovation Consultant for SAVISHKAR India. 
+                    Your expertise includes: Startups, Entrepreneurship, Government Schemes (Startup India), Funding, Scaling, and Business Strategy.
+                    Answer with professional, high-value insights. Use bullet points for clarity. Be encouraging and helpful.
+                    Always respond primarily in the language the user asked the question in (e.g. Hindi, English).
+                    If a question is completely unrelated to business/innovation, politely refocus the user to SAVISHKAR's mission.`;
+
+                    const response = await ai.models.generateContent({
+                        model: 'gemini-2.5-flash',
+                        contents: [
+                            { role: 'user', parts: [{ text: systemPrompt + "\n\nUser Question: " + userMessage }] }
+                        ],
+                    });
+
+                    aiResponse = response.text || "I apologize, but I couldn't formulate a response.";
+
+                } catch (apiError) {
+                    console.error("Gemini API Error:", apiError);
+                    aiResponse = "I'm currently experiencing high network traffic. Please try again later.";
                 }
-                aiResponse = data?.result;
-            } catch (invokeError) {
-                // Fallback: "Simulated LLM" Mode (Natural Conversation)
-                console.log("Using Local Conversational Intelligence");
+            } else {
+                // Fallback: "Simulated LLM" Mode (If no API Key provided by Admin yet)
+                console.log("No VITE_GEMINI_API_KEY found. Falling back to Simulated LLM.");
                 await new Promise(resolve => setTimeout(resolve, 1000)); // Thinking time
 
                 const text = userMessage.toLowerCase();
 
-                // Conversational Logic Engine
                 if (text.match(/\b(hi|hello|hey|greetings|namaste)\b/)) {
                     aiResponse = "Hello there! It's great to connect. I'm here to help you navigate your startup journey. What's on your mind today? We can discuss ideas, funding, or even just how to get started.";
                 }
@@ -106,7 +115,6 @@ export function AiChatWidget() {
                     aiResponse = "Having a mentor can drastically reduce your learning curve. We have a network of industry veterans from organizations like ISRO and DRDO. Once you're a registered member, you can book distinct 1-on-1 sessions with them to get personalized guidance.";
                 }
                 else {
-                    // Generic "LLM-style" fallback
                     const fillers = [
                         "That's an interesting perspective. Could you tell me a bit more about that?",
                         "I understand. Building a venture involves many such moving parts. How are you planning to tackle the next step?",
@@ -114,6 +122,11 @@ export function AiChatWidget() {
                         "I see. That's a crucial part of the process. I'd recommend looking into our 'Programs' section for more structured support on this."
                     ];
                     aiResponse = fillers[Math.floor(Math.random() * fillers.length)];
+                }
+
+                // Alert for admin 
+                if (userMessage.toLowerCase().includes("language") || userMessage.toLowerCase().includes("hindi")) {
+                    aiResponse += "\n\n*(Note: To enable true multilingual support and smarter answers, please set `VITE_GEMINI_API_KEY` in your .env file)*";
                 }
             }
 

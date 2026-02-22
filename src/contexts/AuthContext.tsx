@@ -22,6 +22,7 @@ interface Profile {
   id_card_issued_at: string | null;
   is_temporary_password?: boolean;
   current_session_id?: string; // Added for session enforcement
+  event_manager_expiry?: string | null; // For temporary access limits
 }
 
 interface AuthContextType {
@@ -56,56 +57,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   const fetchProfile = async (userId: string) => {
-    console.log("fetchProfile called for:", userId);
     if (!userId) return;
     try {
-      console.log("Fetching profile from DB...");
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", userId)
-        .single();
+      // Run profile and role queries IN PARALLEL — saves one full network round-trip
+      const [profileRes, roleRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("user_id", userId).single(),
+        supabase.from("user_roles").select("role").eq("user_id", userId).single()
+      ]);
 
-      if (profileError) {
-        console.error("Profile DB Error:", profileError);
-      } else {
-        console.log("Profile data received:", profileData ? "Found" : "Null");
+      if (profileRes.error) {
+        console.error("Profile DB Error:", profileRes.error);
+      }
+      if (roleRes.error) {
+        console.warn("Role DB Error (might be empty):", roleRes.error);
       }
 
-      if (profileData) {
-        setProfile(profileData as Profile);
+      if (profileRes.data) {
+        setProfile(profileRes.data as Profile);
       }
 
-      console.log("Fetching user role...");
-      const { data: roleData, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .single();
-
-      if (roleError) {
-        console.warn("Role DB Error (might be empty):", roleError);
-      } else {
-        console.log("Role data received:", roleData);
-      }
-
-      let finalRole = roleData?.role as AppRole | null;
-
-      // Role determined completely by DB now (Zero Trust)
-      if (profileData?.email === "savishkarindia@gmail.com" && !finalRole) {
-        // Fallback logging only
-        console.warn("Owner logged in but no role found in DB. Please run security migration.");
-      }
-
+      const finalRole = roleRes.data?.role as AppRole | null;
       if (finalRole) {
+        // Enforce Event Manager Expiry
+        if (finalRole === "EVENT_MANAGER" && profileRes.data?.event_manager_expiry) {
+          const expiryDate = new Date(profileRes.data.event_manager_expiry);
+          if (new Date() > expiryDate) {
+            toast({
+              title: "Access Expired",
+              description: "Your term as Event Manager has ended.",
+              variant: "destructive"
+            });
+            // Automatically revoke role in DB so they don't get stuck in a loop forever
+            await supabase.from("user_roles").update({ role: "MEMBER" }).eq("user_id", userId);
+
+            setRole("MEMBER");
+            return;
+          }
+        }
+
         setRole(finalRole);
-      } else {
-        console.log("DEBUG: No role found in user_roles table");
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
     }
-    console.log("fetchProfile completed");
   };
 
   const refreshProfile = async () => {

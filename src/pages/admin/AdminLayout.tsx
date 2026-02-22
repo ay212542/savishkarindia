@@ -28,6 +28,7 @@ const sidebarItems = [
   { href: "/admin/stories", label: "Stories", icon: LayoutTemplate },
   { href: "/admin/alumni", label: "Alumni", icon: GraduationCap },
   { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
+  { href: "/admin/event-manager", label: "Event Management", icon: Calendar },
 
   { href: "/admin/cms", label: "CMS Editor", icon: Palette },
   { href: "/admin/news", label: "News Section", icon: Megaphone },
@@ -71,6 +72,10 @@ export default function AdminLayout() {
     // Super Controller & Admin see everything
     if (role === "SUPER_CONTROLLER" || role === "ADMIN" || user?.email === "savishkarindia@gmail.com") return true;
 
+    if (role === "EVENT_MANAGER") {
+      return item.href === "/admin" || item.href === "/admin/event-manager" || item.href === "/admin/programs" || item.href === "/admin/members";
+    }
+
     // State roles only see specific items
     const allowedItems = [
       "/admin", // Dashboard
@@ -80,6 +85,7 @@ export default function AdminLayout() {
       "/admin/announcements",
       "/admin/approvals",
       "/admin/members",
+      "/admin/events",
       "/admin/reports"
     ];
     return allowedItems.includes(item.href);

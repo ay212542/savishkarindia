@@ -26,6 +26,7 @@ interface MemberData {
   status: "ACTIVE" | "PENDING" | "REJECTED";
   rejection_reason?: string | null;
   joined_year?: string | null;
+  phone?: string | null;
 }
 
 type VerificationStatus = "idle" | "loading" | "active" | "pending" | "rejected" | "not_found";
@@ -55,7 +56,7 @@ export default function Verify() {
           const profile = (rpcData as any)[0];
           setMemberData({
             full_name: profile.full_name,
-            email: "Hidden", // Public RPC doesn't return email
+            email: profile.allow_email_sharing ? profile.email : "Hidden",
             membership_id: profile.membership_id,
             state: profile.state,
             designation: null, // Basic view
@@ -64,7 +65,8 @@ export default function Verify() {
             updated_at: profile.created_at,
             role: profile.role,
             status: "ACTIVE",
-            joined_year: profile.joined_year
+            joined_year: profile.joined_year,
+            phone: profile.allow_mobile_sharing ? profile.phone : null
           });
           setStatus("active");
           return;
@@ -91,7 +93,8 @@ export default function Verify() {
               created_at: application.applied_at,
               updated_at: application.applied_at,
               role: null,
-              status: "PENDING"
+              status: "PENDING",
+              phone: application.phone
             });
             setStatus("pending");
             return;
@@ -108,7 +111,8 @@ export default function Verify() {
               updated_at: application.reviewed_at || application.applied_at,
               role: null,
               status: "REJECTED",
-              rejection_reason: application.rejection_reason
+              rejection_reason: application.rejection_reason,
+              phone: application.phone
             });
             setStatus("rejected");
             return;
@@ -308,6 +312,26 @@ export default function Verify() {
                   </div>
                   <span className="font-mono font-medium">{memberData.membership_id}</span>
                 </div>
+
+                {memberData.phone && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                      <span className="text-muted-foreground">Phone</span>
+                    </div>
+                    <span className="font-medium">{memberData.phone}</span>
+                  </div>
+                )}
+
+                {memberData.email && memberData.email !== "Hidden" && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                      <span className="text-muted-foreground">Email</span>
+                    </div>
+                    <span className="font-medium">{memberData.email}</span>
+                  </div>
+                )}
 
                 {memberData.state && (
                   <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">

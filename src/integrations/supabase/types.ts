@@ -695,6 +695,8 @@ export type Database = {
           twitter_url: string | null
           updated_at: string
           user_id: string
+          event_manager_expiry: string | null
+          allow_email_sharing: boolean | null
         }
         Insert: {
           avatar_url?: string | null
@@ -715,6 +717,8 @@ export type Database = {
           twitter_url?: string | null
           updated_at?: string
           user_id: string
+          event_manager_expiry?: string | null
+          allow_email_sharing?: boolean | null
         }
         Update: {
           avatar_url?: string | null
@@ -735,6 +739,8 @@ export type Database = {
           twitter_url?: string | null
           updated_at?: string
           user_id?: string
+          event_manager_expiry?: string | null
+          allow_email_sharing?: boolean | null
         }
         Relationships: []
       }

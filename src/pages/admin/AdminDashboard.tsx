@@ -51,27 +51,22 @@ export default function AdminDashboard() {
       if (!profile?.id) return;
 
       try {
-        console.log("Fetching Admin Stats...");
-        // Queries - Optimize by not fetching everything if not needed
-        // For counts, use { count: 'exact', head: true } to avoid downloading rows!
         const membersCountQuery = supabase.from("profiles").select("*", { count: "exact", head: true });
         const pendingCountQuery = supabase.from("applications").select("*", { count: "exact", head: true }).eq("status", "pending");
         const eventsCountQuery = supabase.from("events").select("*", { count: "exact", head: true }).eq("is_published", true);
-
-        // Specific queries for charts - Limit columns!
-        // fetching "role" from user_roles is okay
         const rolesQuery = supabase.from("user_roles").select("role");
-
-        // Optimize profiles query - only need state/district for stats
-        const profilesQuery = supabase.from("profiles").select("state, district");
-
-        let activityQuery = supabase
+        const activityQuery = supabase
           .from("audit_logs")
           .select("id, action, created_at")
           .order("created_at", { ascending: false })
           .limit(10);
 
-        // Execute all queries safely
+        // For state admins: only fetch their state's profiles
+        // For national: limit to 500 rows (enough for stats)
+        const profilesQuery = isStateAdmin && userState
+          ? supabase.from("profiles").select("state, district").eq("state", userState).limit(500)
+          : supabase.from("profiles").select("state").limit(500);
+
         const results = await Promise.allSettled([
           membersCountQuery,
           pendingCountQuery,
@@ -83,7 +78,6 @@ export default function AdminDashboard() {
 
         if (!isMounted) return;
 
-        // Helper to extract data safely
         const getRes = (result: PromiseSettledResult<any>, label: string) => {
           if (result.status === "rejected") {
             console.error(`Query Failed (${label}):`, result.reason);
@@ -103,43 +97,25 @@ export default function AdminDashboard() {
         const profilesRes = getRes(results[4], "Profiles");
         const activityRes = getRes(results[5], "Activity");
 
-        // Check if we hit a permission wall (using Members query as canary)
         if (membersRes.error || rolesRes.error) {
           setPermissionError(true);
         } else {
-          setPermissionError(false); // Clear if successful
+          setPermissionError(false);
         }
 
-        // Process Stats
         const roleStats: Record<string, number> = {};
-        const rolesData = rolesRes.data || [];
-
-        // Calculate role stats
-        rolesData.forEach((r: any) => {
+        (rolesRes.data || []).forEach((r: any) => {
           if (r.role) roleStats[r.role] = (roleStats[r.role] || 0) + 1;
         });
 
         const stateStats: Record<string, number> = {};
         const profilesData = profilesRes.data || [];
-
-        // Filter for State Admin if needed
-        const stateProfiles = (isStateAdmin && userState)
-          ? profilesData.filter((p: any) => p.state === userState)
-          : profilesData;
-
-        // Count Districts if State Admin, or States if National
-        let activeDistrictsCount = 0;
         const distSet = new Set<string>();
 
-        stateProfiles.forEach((p: any) => {
-          if (p.state) {
-            stateStats[p.state] = (stateStats[p.state] || 0) + 1;
-          }
-          if (isStateAdmin && p.district) {
-            distSet.add(p.district);
-          }
+        profilesData.forEach((p: any) => {
+          if (p.state) stateStats[p.state] = (stateStats[p.state] || 0) + 1;
+          if (isStateAdmin && p.district) distSet.add(p.district);
         });
-        activeDistrictsCount = distSet.size;
 
         setStats({
           totalMembers: membersRes.count || 0,
@@ -148,7 +124,7 @@ export default function AdminDashboard() {
           roleStats,
           stateStats,
           recentActivity: activityRes.data || [],
-          activeDistricts: activeDistrictsCount
+          activeDistricts: distSet.size
         });
 
       } catch (error) {
@@ -159,10 +135,12 @@ export default function AdminDashboard() {
 
     if (profile?.id) {
       fetchStats();
+    } else {
+      setLoading(false); // Make sure we don't get stuck if there's no profile
     }
 
     return () => { isMounted = false; };
-  }, [profile?.id, isStateAdmin, userState]); // DEPENDENCY FIX: Use profile.id, not profile object!
+  }, [profile?.id, isStateAdmin, userState]);
 
   const statCards = [
     {
@@ -258,7 +236,6 @@ END $$;`}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
             >
               <GlassCard className="relative overflow-hidden">
                 <div className="flex items-start justify-between">
@@ -287,7 +264,7 @@ END $$;`}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Role Distribution (Hide for State Admin if not relevant, or show Global?) 
+        {/* Role Distribution (Hide for State Admin if not relevant, or show Global?)
             Let's hide for State Admin to declutter.
         */}
         {!isStateAdmin && (

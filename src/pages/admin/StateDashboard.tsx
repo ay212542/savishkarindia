@@ -35,20 +35,22 @@ export default function DistrictManager() {
         try {
             // Fetch real data aggregation
             try {
-                const [profilesResponse, leadersResponse, adminsResponse] = await Promise.all([
+                const [profilesResponse, adminsResponse, leadersRolesResponse] = await Promise.all([
                     supabase.from("profiles").select("user_id, state, district"),
-                    supabase.from("leaders").select("prant, district"),
                     supabase.from("user_roles").select("user_id, role")
-                        .in("role", ["STATE_CONVENER", "STATE_CO_CONVENER"])
+                        .in("role", ["STATE_CONVENER", "STATE_CO_CONVENER"]),
+                    supabase.from("user_roles").select("user_id, role")
+                        .in("role", ["NATIONAL_CONVENER", "NATIONAL_CO_CONVENER", "STATE_CONVENER", "STATE_CO_CONVENER", "STATE_INCHARGE", "STATE_CO_INCHARGE", "DISTRICT_CONVENER", "DISTRICT_CO_CONVENER", "DISTRICT_INCHARGE", "DISTRICT_CO_INCHARGE"] as any[])
                 ]);
 
                 if (profilesResponse.error) throw profilesResponse.error;
-                if (leadersResponse.error) throw leadersResponse.error;
                 if (adminsResponse.error) throw adminsResponse.error;
 
                 const profiles = profilesResponse.data || [];
-                const leaders = leadersResponse.data || [];
                 const adminRoles = adminsResponse.data || [];
+
+                // Build leader user_ids set from leadership roles
+                const leaderUserIds = new Set((leadersRolesResponse.data || []).map(r => r.user_id));
 
                 // Fetch full profiles for admins
                 let adminMap = new Map();
@@ -88,12 +90,12 @@ export default function DistrictManager() {
                     }
                 });
 
-                // Count leaders
-                leaders.forEach(l => {
-                    if (l.prant && prantStats.has(l.prant)) {
-                        const s = prantStats.get(l.prant)!;
+                // Count leaders (members who have leadership roles, matched to their profile state)
+                const leaderProfiles = profiles.filter(p => leaderUserIds.has(p.user_id));
+                leaderProfiles.forEach(p => {
+                    if (p.state && prantStats.has(p.state)) {
+                        const s = prantStats.get(p.state)!;
                         s.leaderCount++;
-                        if (l.district) s.districts.add(l.district);
                     }
                 });
 

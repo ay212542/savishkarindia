@@ -270,7 +270,7 @@ export default function AIPanel() {
                     key={index}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
+                    transition={{ duration: 0.2 }}
                     className={`p-4 rounded-lg border ${result.type === "success"
                       ? "bg-emerald-500/10 border-emerald-500/20"
                       : result.type === "warning"

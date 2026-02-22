@@ -45,6 +45,9 @@ interface ProfileData {
   journey_text?: string | null;
   achievements_list?: string | null;
   contribution_details?: string | null;
+  allow_mobile_sharing?: boolean;
+  allow_email_sharing?: boolean;
+  event_manager_expiry?: string | null;
 }
 
 export default function ProfileEditor() {
@@ -281,7 +284,10 @@ export default function ProfileEditor() {
           bio: profile.bio,
           journey_text: profile.journey_text,
           achievements_list: profile.achievements_list,
-          contribution_details: profile.contribution_details
+          contribution_details: profile.contribution_details,
+          allow_mobile_sharing: profile.allow_mobile_sharing,
+          allow_email_sharing: profile.allow_email_sharing,
+          event_manager_expiry: profile.event_manager_expiry
         })
         .eq("id", profile.id);
 
@@ -603,6 +609,18 @@ export default function ProfileEditor() {
                   onChange={(e) => setProfile({ ...profile, district: e.target.value })}
                 />
               </div>
+
+              {userRole === "EVENT_MANAGER" && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Event Manager Expiry Date</Label>
+                  <p className="text-xs text-muted-foreground mb-2">When does their access to the event management system expire?</p>
+                  <Input
+                    type="datetime-local"
+                    value={profile.event_manager_expiry ? new Date(profile.event_manager_expiry).toISOString().slice(0, 16) : ""}
+                    onChange={(e) => setProfile({ ...profile, event_manager_expiry: new Date(e.target.value).toISOString() })}
+                  />
+                </div>
+              )}
             </div>
           </GlassCard>
 
@@ -630,6 +648,29 @@ export default function ProfileEditor() {
                 <Switch
                   checked={profile.is_alumni || false}
                   onCheckedChange={(c) => setProfile({ ...profile, is_alumni: c })}
+                />
+              </div>
+
+              {/* Data Sharing Switches */}
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/20">
+                <div className="space-y-0.5">
+                  <Label>Share Mobile Number</Label>
+                  <p className="text-xs text-muted-foreground">Show mobile on public ID verify scan</p>
+                </div>
+                <Switch
+                  checked={profile.allow_mobile_sharing || false}
+                  onCheckedChange={(c) => setProfile({ ...profile, allow_mobile_sharing: c })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/20">
+                <div className="space-y-0.5">
+                  <Label>Share Email Address</Label>
+                  <p className="text-xs text-muted-foreground">Show email on public ID verify scan</p>
+                </div>
+                <Switch
+                  checked={profile.allow_email_sharing || false}
+                  onCheckedChange={(c) => setProfile({ ...profile, allow_email_sharing: c })}
                 />
               </div>
             </div>

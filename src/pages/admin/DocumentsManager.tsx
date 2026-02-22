@@ -43,27 +43,25 @@ export default function DocumentsManager() {
     const [brochureDesc, setBrochureDesc] = useState("");
 
     useEffect(() => {
-        fetchMous();
-        fetchGuides();
-        fetchBrochures();
+        // Fetch all 3 data types IN PARALLEL on mount
+        Promise.all([
+            supabase.from("mou_templates").select("*").order("uploaded_at", { ascending: false }),
+            supabase.from("guides").select("*").order("updated_at", { ascending: false }),
+            supabase.from("brochures").select("*").order("created_at", { ascending: false })
+        ]).then(([mouRes, guideRes, brochureRes]) => {
+            if (mouRes.data) setMous(mouRes.data);
+            setMouLoading(false);
+            if (guideRes.data) setGuides(guideRes.data);
+            setGuideLoading(false);
+            if (brochureRes.data) setBrochures(brochureRes.data);
+            setBrochureLoading(false);
+        });
     }, []);
 
     async function fetchMous() {
         const { data } = await supabase.from("mou_templates").select("*").order("uploaded_at", { ascending: false });
         if (data) setMous(data);
         setMouLoading(false);
-    }
-
-    async function fetchGuides() {
-        const { data } = await supabase.from("guides").select("*").order("updated_at", { ascending: false });
-        if (data) setGuides(data);
-        setGuideLoading(false);
-    }
-
-    async function fetchBrochures() {
-        const { data } = await supabase.from("brochures").select("*").order("created_at", { ascending: false });
-        if (data) setBrochures(data);
-        setBrochureLoading(false);
     }
 
     // --- MoU Functions ---
@@ -112,7 +110,7 @@ export default function DocumentsManager() {
         try {
             await supabase.from("mou_templates").delete().eq("id", id);
             toast({ title: "Deleted", description: "Document removed" });
-            fetchMous();
+            setMous(prev => prev.filter(m => m.id !== id)); // Local state — no re-fetch
         } catch (e) {
             console.error(e);
         }
@@ -120,7 +118,7 @@ export default function DocumentsManager() {
 
     async function toggleMouVisibility(item: any) {
         await supabase.from("mou_templates").update({ visible: !item.visible }).eq("id", item.id);
-        fetchMous();
+        setMous(prev => prev.map(m => m.id === item.id ? { ...m, visible: !m.visible } : m)); // Local state
     }
 
     // --- Guide Functions ---
@@ -156,7 +154,9 @@ export default function DocumentsManager() {
 
             toast({ title: "Success", description: "Guide uploaded" });
             setGuideTitle("");
-            fetchGuides();
+            // Refresh guides list after upload
+            const { data: freshGuides } = await supabase.from("guides").select("*").order("updated_at", { ascending: false });
+            if (freshGuides) setGuides(freshGuides);
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" });
         }
@@ -166,11 +166,11 @@ export default function DocumentsManager() {
     async function deleteGuide(id: string) {
         if (!confirm("Delete this guide?")) return;
         await supabase.from("guides").delete().eq("id", id);
-        fetchGuides();
+        setGuides(prev => prev.filter(g => g.id !== id)); // Local state — no re-fetch
     }
     async function toggleGuideVisibility(item: any) {
         await supabase.from("guides").update({ visible: !item.visible }).eq("id", item.id);
-        fetchGuides();
+        setGuides(prev => prev.map(g => g.id === item.id ? { ...g, visible: !g.visible } : g)); // Local state
     }
 
     // --- Brochure Functions ---
@@ -212,7 +212,9 @@ export default function DocumentsManager() {
             toast({ title: "Success", description: "Brochure uploaded" });
             setBrochureTitle("");
             setBrochureDesc("");
-            fetchBrochures();
+            // Refresh brochures list after upload
+            const { data: freshBrochures } = await supabase.from("brochures").select("*").order("created_at", { ascending: false });
+            if (freshBrochures) setBrochures(freshBrochures);
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" });
         }
@@ -222,12 +224,12 @@ export default function DocumentsManager() {
     async function deleteBrochure(id: string) {
         if (!confirm("Delete this brochure?")) return;
         await supabase.from("brochures").delete().eq("id", id);
-        fetchBrochures();
+        setBrochures(prev => prev.filter(b => b.id !== id)); // Local state — no re-fetch
     }
 
     async function toggleBrochureVisibility(item: any) {
         await supabase.from("brochures").update({ is_active: !item.is_active }).eq("id", item.id);
-        fetchBrochures();
+        setBrochures(prev => prev.map(b => b.id === item.id ? { ...b, is_active: !b.is_active } : b)); // Local state
     }
 
 

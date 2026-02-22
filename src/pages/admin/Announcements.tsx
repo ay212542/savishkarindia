@@ -236,7 +236,7 @@ export default function Announcements() {
                 key={announcement.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
+                transition={{ duration: 0.2 }}
               >
                 <GlassCard className={`${!announcement.is_active ? "opacity-50" : ""}`}>
                   <div className="flex items-start gap-4">

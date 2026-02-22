@@ -75,33 +75,24 @@ export default function ProgramsManager() {
   }, [user, role, profile]);
 
   async function fetchEvents() {
-    let query = supabase
-      .from("events")
-      .select("*")
-      .order("event_date", { ascending: false });
+    let query = supabase.from("events").select("*").order("event_date", { ascending: false });
+
+    if (isStateAdmin && profile?.state) {
+      // Server-side filter for state admins — only download relevant events
+      query = query.or(
+        `created_by.eq.${user?.id},collab_states.cs.{${profile.state}},location.ilike.%${profile.state}%`
+      );
+    } else {
+      // Cap super admin fetch to 60 most recent events
+      query = query.limit(60);
+    }
 
     const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching events:", error);
     } else {
-      let filteredEvents = data || [];
-
-      // Strict filtering for State Admins
-      if (isStateAdmin && profile?.state) {
-        filteredEvents = filteredEvents.filter(event => {
-          // 1. Created by me
-          if (event.created_by === user?.id) return true;
-          // 2. Collaboration includes my state
-          if (event.collab_states?.includes(profile.state)) return true;
-          // 3. Location matches my state (fuzzy check)
-          if (event.location && event.location.includes(profile.state)) return true;
-
-          return false;
-        });
-      }
-
-      setEvents(filteredEvents);
+      setEvents(data || []);
     }
     setLoading(false);
   }
@@ -314,7 +305,6 @@ export default function ProgramsManager() {
               key={event.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
             >
               <GlassCard className="h-full flex flex-col relative overflow-hidden">
                 {event.approval_status === 'pending' && (

@@ -17,11 +17,13 @@ interface LeaderProfile {
   avatar_url: string | null;
   state: string | null;
   district: string | null;
+  display_order: number;
 }
 
 export default function LeadershipManager() {
   const [leaders, setLeaders] = useState<LeaderProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const { user, role } = useAuth();
   const navigate = useNavigate();
 
@@ -62,13 +64,29 @@ export default function LeadershipManager() {
         designation: p.designation,
         avatar_url: p.avatar_url,
         state: p.state,
-        district: p.district
+        district: p.district,
+        display_order: (p as any).display_order ?? 999
       }));
 
-      setLeaders(mappedLeaders);
+      // Sort in memory in case the SQL column display_order doesn't exist yet
+      const sortedLeaders = mappedLeaders.sort((a, b) => a.display_order - b.display_order);
+      setLeaders(sortedLeaders);
     }
     setLoading(false);
   }
+
+  const handleDisplayOrderChange = async (id: string, newOrder: number) => {
+    setSavingId(id);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ display_order: newOrder } as any)
+      .eq("id", id);
+
+    if (!error) {
+      setLeaders(leaders.map(l => l.id === id ? { ...l, display_order: newOrder } : l).sort((a, b) => a.display_order - b.display_order));
+    }
+    setSavingId(null);
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -124,6 +142,18 @@ export default function LeadershipManager() {
                   {leader.state && (
                     <p className="text-xs text-muted-foreground mt-1">{leader.state} {leader.district ? `• ${leader.district}` : ''}</p>
                   )}
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground font-medium w-24">Display Order:</span>
+                    <input
+                      type="number"
+                      value={leader.display_order}
+                      onChange={(e) => handleDisplayOrderChange(leader.id, parseInt(e.target.value) || 0)}
+                      className="w-16 h-8 text-sm px-2 border rounded-md bg-background"
+                      disabled={savingId === leader.id}
+                    />
+                    {savingId === leader.id && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+                  </div>
                 </div>
               </div>
               <div className="flex gap-2 mt-4 pt-4 border-t border-border/50">

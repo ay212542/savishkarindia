@@ -117,6 +117,7 @@ export const ROLE_LABELS: Record<string, string> = {
   NATIONAL_CONVENER: "National Convener",
   INCHARGE: "Incharge",
   CO_INCHARGE: "Co-Incharge",
+  EVENT_MANAGER: "Event Manager",
   ADMIN: "Administrator",
   SUPER_CONTROLLER: "Super Controller"
 };
@@ -147,6 +148,7 @@ export const ROLE_HIERARCHY = [
   "DISTRICT_CO_CONVENER",
   "DISTRICT_INCHARGE",
   "DISTRICT_CO_INCHARGE",
+  "EVENT_MANAGER",
   "DESIGNATORY",
   "STUDENT_LEADER",
   "MEMBER"
@@ -166,7 +168,7 @@ export const APPLICATION_DESIGNATIONS = [
   "STATE_CO_CONVENER"
 ];
 
-export type AppRole = 
+export type AppRole =
   | "MEMBER"
   | "STUDENT_LEADER"
   | "DESIGNATORY"
@@ -182,6 +184,7 @@ export type AppRole =
   | "NATIONAL_CONVENER"
   | "INCHARGE"
   | "CO_INCHARGE"
+  | "EVENT_MANAGER"
   | "ADMIN"
   | "SUPER_CONTROLLER";
 
@@ -216,13 +219,13 @@ export const DESIGNATION_OPTIONS = [
 ];
 
 // Helper function to check if a role is state-level
-export const isStateRole = (role: string) => 
-  role.startsWith("STATE_") || role === "NATIONAL_CONVENER" || role === "NATIONAL_CO_CONVENER";
+export const isStateRole = (role: string) =>
+  role === "STATE_CONVENER" || role === "STATE_CO_CONVENER" || role === "STATE_INCHARGE" || role === "STATE_CO_INCHARGE";
 
 // Helper function to check if a role is district-level
-export const isDistrictRole = (role: string) => 
-  role.startsWith("DISTRICT_");
+export const isDistrictRole = (role: string) =>
+  role === "DISTRICT_CONVENER" || role === "DISTRICT_CO_CONVENER" || role === "DISTRICT_INCHARGE" || role === "DISTRICT_CO_INCHARGE";
 
 // Helper function to check if a role is national-level
-export const isNationalRole = (role: string) => 
+export const isNationalRole = (role: string) =>
   role === "NATIONAL_CONVENER" || role === "NATIONAL_CO_CONVENER";
