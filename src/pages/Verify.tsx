@@ -56,7 +56,8 @@ export default function Verify() {
           const profile = (rpcData as any)[0];
           setMemberData({
             full_name: profile.full_name,
-            email: profile.allow_email_sharing ? profile.email : "Hidden",
+            // null = column doesn't exist yet (show by default). false = explicitly hidden.
+            email: profile.allow_email_sharing !== false ? profile.email : null,
             membership_id: profile.membership_id,
             state: profile.state,
             designation: null, // Basic view
@@ -66,7 +67,7 @@ export default function Verify() {
             role: profile.role,
             status: "ACTIVE",
             joined_year: profile.joined_year,
-            phone: profile.allow_mobile_sharing ? profile.phone : null
+            phone: profile.allow_mobile_sharing !== false ? profile.phone : null
           });
           setStatus("active");
           return;

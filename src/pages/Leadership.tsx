@@ -96,53 +96,76 @@ export default function Leadership() {
 
           setLeaders(sorted);
         } else {
-          // Fallback: direct query on profiles where is_leadership = true
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("id, user_id, full_name, avatar_url, state, district, designation, display_order, instagram_url, facebook_url, twitter_url, linkedin_url")
-            .eq("is_leadership", true)
-            .order("display_order", { ascending: true });
+          // Fallback: query user_roles for leadership roles, then fetch profiles
+          // Only use roles that exist in the current DB enum
+          // (new roles like STATE_INCHARGE etc. only exist after SQL migration)
+          const KNOWN_LEADER_ROLES = [
+            "NATIONAL_CONVENER", "NATIONAL_CO_CONVENER",
+            "STATE_CONVENER", "STATE_CO_CONVENER",
+          ] as any[];
+
+          const EXTENDED_LEADER_ROLES = [
+            "STATE_INCHARGE", "STATE_CO_INCHARGE",
+            "DISTRICT_CONVENER", "DISTRICT_CO_CONVENER",
+            "DISTRICT_INCHARGE", "DISTRICT_CO_INCHARGE"
+          ] as any[];
+
+          // Fetch known roles first (always works)
+          const { data: knownRolesData } = await supabase
+            .from("user_roles")
+            .select("user_id, role")
+            .in("role", KNOWN_LEADER_ROLES);
+
+          // Try extended roles — may fail if SQL migration not yet run
+          let extendedRolesData: any[] = [];
+          try {
+            const { data } = await supabase
+              .from("user_roles")
+              .select("user_id, role")
+              .in("role", EXTENDED_LEADER_ROLES);
+            extendedRolesData = data || [];
+          } catch { /* ignore if these roles don't exist yet */ }
 
           if (cancelled) return;
 
-          if (profileData) {
-            // Get roles for these users
-            const userIds = profileData.map((p: any) => p.user_id).filter(Boolean);
-            let roleMap = new Map<string, string>();
-            if (userIds.length > 0) {
-              const { data: rolesData } = await supabase
-                .from("user_roles")
-                .select("user_id, role")
-                .in("user_id", userIds);
-              if (rolesData) {
-                roleMap = new Map(rolesData.map(r => [r.user_id, r.role]));
-              }
+          const rolesData = [...(knownRolesData || []), ...extendedRolesData];
+
+          if (rolesData && rolesData.length > 0) {
+            const userIds = rolesData.map(r => r.user_id);
+            const roleMap = new Map(rolesData.map(r => [r.user_id, r.role]));
+
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("id, user_id, full_name, avatar_url, state, district, designation, instagram_url, facebook_url, twitter_url, linkedin_url")
+              .in("user_id", userIds);
+
+            if (cancelled) return;
+
+            if (profileData) {
+              const mapped: Leader[] = profileData.map((p: any) => ({
+                id: p.id,
+                full_name: p.full_name,
+                email: null,
+                role: roleMap.get(p.user_id) || "MEMBER",
+                prant: p.state,
+                district: p.district,
+                designation: p.designation,
+                photo_url: p.avatar_url,
+                instagram_url: p.instagram_url,
+                facebook_url: p.facebook_url,
+                twitter_url: p.twitter_url,
+                linkedin_url: p.linkedin_url,
+                display_order: 999
+              }));
+
+              const sorted = mapped.sort((a, b) => {
+                const aRank = roleOrder.indexOf(a.role);
+                const bRank = roleOrder.indexOf(b.role);
+                return (aRank === -1 ? 999 : aRank) - (bRank === -1 ? 999 : bRank);
+              });
+
+              setLeaders(sorted);
             }
-
-            const mapped: Leader[] = profileData.map((p: any) => ({
-              id: p.id,
-              full_name: p.full_name,
-              email: null,
-              role: roleMap.get(p.user_id) || "MEMBER",
-              prant: p.state,
-              district: p.district,
-              designation: p.designation,
-              photo_url: p.avatar_url,
-              instagram_url: p.instagram_url,
-              facebook_url: p.facebook_url,
-              twitter_url: p.twitter_url,
-              linkedin_url: p.linkedin_url,
-              display_order: p.display_order ?? 999
-            }));
-
-            const sorted = mapped.sort((a, b) => {
-              if (a.display_order !== b.display_order) return a.display_order - b.display_order;
-              const aRank = roleOrder.indexOf(a.role);
-              const bRank = roleOrder.indexOf(b.role);
-              return (aRank === -1 ? 999 : aRank) - (bRank === -1 ? 999 : bRank);
-            });
-
-            setLeaders(sorted);
           }
         }
       } catch (err) {
@@ -155,17 +178,24 @@ export default function Leadership() {
     return () => { cancelled = true; };
   }, []);
 
+  // Inline role arrays — more reliable than imported helper functions
+  const NATIONAL_ROLES = ["NATIONAL_CONVENER", "NATIONAL_CO_CONVENER"];
+  const STATE_ROLES = ["STATE_CONVENER", "STATE_CO_CONVENER", "STATE_INCHARGE", "STATE_CO_INCHARGE"];
+  const DISTRICT_ROLES = ["DISTRICT_CONVENER", "DISTRICT_CO_CONVENER", "DISTRICT_INCHARGE", "DISTRICT_CO_INCHARGE"];
+
   // Memoized filtered lists — avoids recomputing on every render
-  const nationalLeaders = useMemo(() => leaders.filter(l => isNationalRole(l.role)), [leaders]);
+  const nationalLeaders = useMemo(() =>
+    leaders.filter(l => NATIONAL_ROLES.includes(l.role)),
+    [leaders]);
 
   const stateLeaders = useMemo(() =>
     leaders.filter(l =>
-      isStateRole(l.role) && (selectedPrant === "all" || l.prant === selectedPrant)
+      STATE_ROLES.includes(l.role) && (selectedPrant === "all" || l.prant === selectedPrant)
     ), [leaders, selectedPrant]);
 
   const districtLeaders = useMemo(() =>
     leaders.filter(l =>
-      isDistrictRole(l.role) && (selectedPrant === "all" || l.prant === selectedPrant)
+      DISTRICT_ROLES.includes(l.role) && (selectedPrant === "all" || l.prant === selectedPrant)
     ), [leaders, selectedPrant]);
 
   const allFiltered = useMemo(() =>
