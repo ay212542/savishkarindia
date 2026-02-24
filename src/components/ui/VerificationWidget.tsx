@@ -91,11 +91,11 @@ export function VerificationWidget() {
                 .from("profiles")
                 .select("*");
 
-            if (type === "membership_id") query = query.eq("membership_id", val.trim());
+            if (type === "membership_id") query = query.ilike("membership_id", val.trim());
             else if (type === "email") query = query.ilike("email", val.trim());
             else if (type === "phone") query = query.eq("phone", val.trim());
 
-            const { data: profileData, error: profileError } = await query.maybeSingle();
+            const { data: profileData, error: profileError } = await query.limit(1).maybeSingle();
 
             if (profileData) {
                 const profile = profileData as any;

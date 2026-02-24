@@ -57,18 +57,23 @@ export default function Verify() {
           lookupType = "phone";
         }
 
+        console.log(`[Verify] Looking up: ${membershipId} as ${lookupType}`);
+
         // 1. Try RPC first (Security Definer logic to bypass RLS)
         if (lookupType === "membership_id") {
-          console.log("Attempting RPC verification for:", membershipId);
+          console.log("[Verify] Attempting RPC verification...");
           const { data: rpcData, error: rpcError } = await supabase
             .rpc("get_member_public_profile" as any, { lookup_id: membershipId.trim() });
 
           if (rpcError) {
-            console.error("RPC Verification Error:", rpcError);
+            console.error("[Verify] RPC Error:", rpcError);
+          } else {
+            console.log("[Verify] RPC Response:", rpcData?.length, "records");
           }
 
           if (rpcData && !rpcError && (rpcData as any).length > 0) {
             const profile = (rpcData as any)[0];
+            console.log("[Verify] Found via RPC:", profile.membership_id);
             setMemberData({
               full_name: profile.full_name,
               email: profile.allow_email_sharing !== false ? profile.email : null,
@@ -86,23 +91,32 @@ export default function Verify() {
             setStatus("active");
             return;
           }
-           console.log("RPC returned no data or errored. Trying direct query fallback...");
+          console.log("[Verify] RPC returned no data or errored. Trying direct query fallback...");
         }
 
         // 2. Direct Query Fallback (Note: This will only work if RLS allows it)
+        console.log("[Verify] Trying direct database query with ilike...");
         let query = supabase
           .from("profiles")
           .select("*");
 
         if (lookupType === "membership_id") {
-          // Use Case-Insensitive filter and handle numeric-only matches as fallback
-          const cleanedId = membershipId.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-          query = query.or(`membership_id.ilike.%${membershipId.trim()}%,membership_id.ilike.%${cleanedId}%`);
+          // Use case-insensitive ILIKE for partial matching
+          console.log(`[Verify] Searching for membership_id ILIKE ${membershipId.trim()}`);
+          query = query.ilike("membership_id", membershipId.trim());
         }
         else if (lookupType === "email") query = query.ilike("email", membershipId.trim());
         else if (lookupType === "phone") query = query.eq("phone", membershipId.trim());
 
-        const { data: profileData, error: profileError } = await query.maybeSingle();
+        const { data: profileData, error: profileError } = await query.limit(1).maybeSingle();
+
+        if (profileError) {
+          console.error("[Verify] Direct Query Error:", profileError);
+        } else if (profileData) {
+          console.log("[Verify] Found via direct query:", profileData.membership_id);
+        } else {
+          console.log("[Verify] Direct query returned no results");
+        }
 
         if (profileError) {
           console.error("Direct Query Error:", profileError);

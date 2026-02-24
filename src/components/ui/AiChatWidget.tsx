@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 interface Message {
     id: string;
@@ -58,26 +57,11 @@ export function AiChatWidget() {
         setLoading(true);
 
         try {
-            // Fallback used so the Vite server doesn't need to be restarted to pick up the .env change
-            const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyD3SE5gW5Th9bbPoItY413T3HCglJeXb3Q";
+            const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
             let aiResponse = "";
 
             if (geminiApiKey) {
                 try {
-                    // Initialize the real Gemini AI model
-                    // We route it through our Vite proxy to bypass adblockers/Brave shields
-                    const genAI = new GoogleGenerativeAI(geminiApiKey);
-                    
-                    // The standard getGenerativeModel method accepts RequestOptions in the second param
-                    // customFetch is part of the API, any type issues can be ignored with ts-ignore or explicit casting
-                    const model = genAI.getGenerativeModel(
-                        { model: "gemini-1.5-flash" },
-                        { 
-                          baseUrl: "/api/gemini",
-                          apiVersion: "v1" 
-                        }
-                    );
-
                     const systemPrompt = `You are the Lead Business Strategist for SAVISHKAR India. 
                     Mission: Empower next-gen innovators to transform ideas into impact.
                     Expertise: Startups, MSME schemes, Seed Funding, ISRO/DRDO mentorship, Pitch Decks, and scaling strategies.
@@ -90,25 +74,48 @@ export function AiChatWidget() {
                     
                     Respond as an expert mentor.`;
 
-                    const result = await model.generateContent({
-                        contents: [
-                            { role: 'user', parts: [{ text: systemPrompt + "\n\nUser Question: " + userMessage }] }
-                        ],
+                    // Using the existing Vite proxy for Gemini to bypass CORS if running locally
+                    // Or direct URL if in production
+                    const baseUrl = import.meta.env.DEV ? '/api/gemini' : 'https://generativelanguage.googleapis.com';
+                    const apiUrl = `${baseUrl}/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{ text: `${systemPrompt}\n\nUser: ${userMessage}` }]
+                            }],
+                            generationConfig: {
+                                temperature: 0.7,
+                                maxOutputTokens: 1000,
+                            }
+                        })
                     });
 
-                    aiResponse = result.response.text() || "I apologize, but I couldn't formulate a response right now.";
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error("Gemini API Error Response:", errorText);
+                        throw new Error(`Gemini API Error: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+                        aiResponse = data.candidates[0].content.parts[0].text;
+                    } else {
+                        aiResponse = "I apologize, but I couldn't formulate a response right now. Invalid format returned.";
+                    }
 
                 } catch (apiError: any) {
                     console.error("Gemini API Error:", apiError);
-                    if (apiError?.message?.includes("Failed to fetch")) {
-                        aiResponse = "Error connecting to AI: Your browser (like Brave Shields) or an AdBlocker is blocking the connection to Google's AI servers. Please disable shields/adblock for this local site.";
-                    } else {
-                        aiResponse = "Error connecting to AI: " + (apiError?.message || JSON.stringify(apiError));
-                    }
+                    aiResponse = "Error connecting to AI: " + (apiError?.message || "Unknown error occurred. Please try again.");
                 }
             } else {
                 // Fallback: Professional Smart Response System (Always stays ready)
-                console.warn("No VITE_GEMINI_API_KEY found. Using local logic.");
+                console.warn("No VITE_OPENAI_API_KEY found. Using local logic.");
                 await new Promise(resolve => setTimeout(resolve, 800));
 
                 const text = userMessage.toLowerCase();
@@ -123,7 +130,7 @@ export function AiChatWidget() {
                     aiResponse = "SAVISHKAR provides access to diverse funding pipelines, including Seed Grants for verified prototypes. Have you prepared your pitch deck yet? Our resources section can help you get started.";
                 }
                 else {
-                    aiResponse = "That's a crucial aspect of the innovation process. To give you the best strategic advice, I recommend setting up the `VITE_GEMINI_API_KEY` for full cognitive processing, or you can explore our 'Programs' section for direct mentorship.";
+                    aiResponse = "That's a crucial aspect of the innovation process. For the best strategic advice, please ensure the OpenAI API is properly configured.";
                 }
             }
 
