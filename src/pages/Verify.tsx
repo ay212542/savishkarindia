@@ -57,10 +57,15 @@ export default function Verify() {
           lookupType = "phone";
         }
 
-        // Try RPC first for membership_id because of potential public RLS restrictions
+        // 1. Try RPC first (Security Definer logic to bypass RLS)
         if (lookupType === "membership_id") {
+          console.log("Attempting RPC verification for:", membershipId);
           const { data: rpcData, error: rpcError } = await supabase
-            .rpc("get_member_public_profile" as any, { lookup_id: membershipId });
+            .rpc("get_member_public_profile" as any, { lookup_id: membershipId.trim() });
+
+          if (rpcError) {
+            console.error("RPC Verification Error:", rpcError);
+          }
 
           if (rpcData && !rpcError && (rpcData as any).length > 0) {
             const profile = (rpcData as any)[0];
@@ -72,7 +77,7 @@ export default function Verify() {
               designation: profile.designation,
               avatar_url: profile.avatar_url,
               created_at: profile.created_at,
-              updated_at: profile.created_at, // Use created_at as updated_at isn't in RPC
+              updated_at: profile.created_at,
               role: profile.role || "MEMBER",
               status: "ACTIVE",
               joined_year: profile.joined_year,
@@ -81,21 +86,29 @@ export default function Verify() {
             setStatus("active");
             return;
           }
+           console.log("RPC returned no data or errored. Trying direct query fallback...");
         }
 
+        // 2. Direct Query Fallback (Note: This will only work if RLS allows it)
         let query = supabase
           .from("profiles")
           .select("*");
 
-        if (lookupType === "membership_id") query = query.eq("membership_id", membershipId);
-        else if (lookupType === "email") query = query.ilike("email", membershipId);
-        else if (lookupType === "phone") query = query.eq("phone", membershipId);
+        if (lookupType === "membership_id") {
+          // Use Case-Insensitive filter for direct query too
+          query = query.ilike("membership_id", membershipId.trim());
+        }
+        else if (lookupType === "email") query = query.ilike("email", membershipId.trim());
+        else if (lookupType === "phone") query = query.eq("phone", membershipId.trim());
 
         const { data: profileData, error: profileError } = await query.maybeSingle();
 
+        if (profileError) {
+          console.error("Direct Query Error:", profileError);
+        }
+
         if (profileData && !profileError) {
           const profile = profileData as any;
-          // Get role separately
           let userRole = "MEMBER";
           if (profile.user_id) {
             const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", profile.user_id).maybeSingle();
@@ -184,7 +197,9 @@ export default function Verify() {
           navigate(`/verify/${id}`);
         },
         (error) => {
-          console.log(error);
+          // Standard scanner errors (like not finding a QR in the frame) should be silenced to avoid UI spam
+          if (typeof error === 'string' && error.includes("No QR code found")) return;
+          console.debug("Scanner noise:", error);
         }
       );
 

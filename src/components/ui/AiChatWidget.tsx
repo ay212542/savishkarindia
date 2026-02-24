@@ -71,7 +71,7 @@ export function AiChatWidget() {
                     // The standard getGenerativeModel method accepts RequestOptions in the second param
                     // customFetch is part of the API, any type issues can be ignored with ts-ignore or explicit casting
                     const model = genAI.getGenerativeModel(
-                        { model: "gemini-2.5-flash" },
+                        { model: "gemini-1.5-flash" },
                         { baseUrl: "/api/gemini" }
                     );
 

@@ -22,14 +22,14 @@ export function AnimatedBackground() {
       {/* Rockets - Innovative flying elements with diverse paths */}
       <div className="absolute inset-0">
         {/* Diagonal Rockets - Strategic Flow */}
-        {[...Array(6)].map((_, i) => (
+        {[...Array(3)].map((_, i) => (
           <div
             key={`rocket-diag-${i}`}
             className="absolute animate-rocket-diagonal opacity-0"
             style={{
-              '--rocket-duration': `${10 + i * 5}s`,
-              '--rocket-delay': `${i * 6}s`,
-              left: `${(i * 18) % 90}%`,
+              '--rocket-duration': `${15 + i * 5}s`,
+              '--rocket-delay': `${i * 8}s`,
+              left: `${(i * 30) % 90}%`,
               top: '100%',
               scale: `${0.8 + (i % 3) * 0.2}`
             } as any}
@@ -39,14 +39,14 @@ export function AnimatedBackground() {
         ))}
 
         {/* Vertical Rockets - Constant Growth */}
-        {[...Array(6)].map((_, i) => (
+        {[...Array(2)].map((_, i) => (
           <div
             key={`rocket-up-${i}`}
             className="absolute animate-rocket-up opacity-0"
             style={{
-              '--rocket-duration': `${12 + i * 4}s`,
-              '--rocket-delay': `${i * 8 + 3}s`,
-              left: `${5 + (i * 15) % 90}%`,
+              '--rocket-duration': `${18 + i * 4}s`,
+              '--rocket-delay': `${i * 12 + 4}s`,
+              left: `${20 + (i * 40) % 90}%`,
               top: '100%',
               scale: `${0.7 + (i % 2) * 0.3}`
             } as any}
@@ -56,15 +56,15 @@ export function AnimatedBackground() {
         ))}
 
         {/* Cross-Screen Rockets - Global Impact */}
-        {[...Array(5)].map((_, i) => (
+        {[...Array(2)].map((_, i) => (
           <div
             key={`rocket-across-${i}`}
             className="absolute animate-rocket-across opacity-0"
             style={{
-              '--rocket-duration': `${15 + i * 6}s`,
-              '--rocket-delay': `${i * 10 + 5}s`,
+              '--rocket-duration': `${20 + i * 6}s`,
+              '--rocket-delay': `${i * 15 + 7}s`,
               left: '-10%',
-              top: `${10 + (i * 18) % 80}%`,
+              top: `${20 + (i * 30) % 80}%`,
               scale: `${0.9 + (i % 2) * 0.1}`
             } as any}
           >

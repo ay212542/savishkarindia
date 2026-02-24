@@ -123,8 +123,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Fetch profile without triggering this effect again
             console.log("Fetching profile for user:", session.user.id);
             try {
-              await fetchProfile(session.user.id);
-              console.log("Profile fetch complete");
+              fetchProfile(session.user.id);
+              console.log("Profile fetch started in background");
             } catch (err) {
               console.error("Profile fetch failed in listener:", err);
             }
@@ -136,13 +136,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               sessionStorage.setItem('savishkar_session_id', currentBrowserSessionId);
             }
 
-            // Update DB with this session ID
-            // Run this in background, don't await blocking loading state
-            supabase.from("profiles").update({
-              current_session_id: currentBrowserSessionId
-            } as any).eq("user_id", session.user.id).then(({ error }) => {
-              if (error) console.error("Error updating session ID:", error);
-            });
+            // Update DB with this session ID only if it's a new one to save a request
+            if (!sessionStorage.getItem('savishkar_session_id_synced')) {
+              supabase.from("profiles").update({
+                current_session_id: currentBrowserSessionId
+              } as any).eq("user_id", session.user.id).then(({ error }) => {
+                if (!error) sessionStorage.setItem('savishkar_session_id_synced', 'true');
+                else console.error("Error updating session ID:", error);
+              });
+            }
             // --- SINGLE SESSION ENFORCEMENT END ---
 
           } else {
@@ -165,14 +167,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Initial getSession:", session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // CRITICAL PERFORMANCE FIX: Don't wait for profile to show the app
+      setLoading(false); 
+
       if (session?.user) {
         try {
-          await fetchProfile(session.user.id);
+          fetchProfile(session.user.id); // Fetch in background
         } catch (err) {
           console.error("Profile fetch failed in initial check:", err);
         }
       }
-      setLoading(false);
     });
 
     // Safety timeout to prevent infinite loading
@@ -184,7 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         return currentLoading;
       });
-    }, 8000);
+    }, 3000); // Reduced from 8s to 3s for faster recovery
 
     return () => {
       subscription.unsubscribe();

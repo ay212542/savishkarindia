@@ -480,14 +480,13 @@
 }
 
 @keyframes rocketPulse {
-
-  0%,
-  100% {
-    filter: drop-shadow(0 0 2px var(--primary)) brightness(1);
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
   }
-
   50% {
-    filter: drop-shadow(0 0 8px var(--primary)) brightness(1.5);
+    opacity: 1;
+    transform: scale(1.1);
   }
 }
 
@@ -518,6 +517,7 @@
 
 .rocket-pulse {
   animation: rocketPulse 2s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 .animate-spin-slow {
