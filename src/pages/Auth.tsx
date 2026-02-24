@@ -41,8 +41,24 @@ export default function Auth() {
           .eq("user_id", user.id)
           .single();
 
-        if (roleData?.role === "SUPER_CONTROLLER" || roleData?.role === "ADMIN") {
-          navigate("/admin");
+        const adminRoles = [
+          "SUPER_CONTROLLER", "ADMIN", "STATE_CONVENER", "STATE_CO_CONVENER",
+          "NATIONAL_CONVENER", "NATIONAL_CO_CONVENER", "REGIONAL_CONVENER",
+          "REGIONAL_CO_CONVENER", "EVENT_MANAGER"
+        ];
+
+        if (adminRoles.includes(roleData?.role)) {
+          if (roleData?.role === "EVENT_MANAGER") {
+            navigate("/admin/event-dashboard");
+          } else if (roleData?.role === "NATIONAL_CONVENER") {
+            navigate("/admin/national-convener");
+          } else if (roleData?.role === "NATIONAL_CO_CONVENER") {
+            navigate("/admin/national-co-convener");
+          } else if (roleData?.role === "REGIONAL_CONVENER" || roleData?.role === "REGIONAL_CO_CONVENER") {
+            navigate("/admin/regional-convener");
+          } else {
+            navigate("/admin");
+          }
         } else {
           navigate("/dashboard");
         }
@@ -76,9 +92,25 @@ export default function Auth() {
             .eq("user_id", user.id)
             .single();
 
-          if (roleData?.role === "SUPER_CONTROLLER" || roleData?.role === "ADMIN") {
+          const adminRoles = [
+            "SUPER_CONTROLLER", "ADMIN", "STATE_CONVENER", "STATE_CO_CONVENER",
+            "NATIONAL_CONVENER", "NATIONAL_CO_CONVENER", "REGIONAL_CONVENER",
+            "REGIONAL_CO_CONVENER", "EVENT_MANAGER"
+          ];
+
+          if (adminRoles.includes(roleData?.role)) {
             toast({ title: "Welcome back!", description: "Accessing Command Console..." });
-            navigate("/admin");
+            if (roleData?.role === "EVENT_MANAGER") {
+              navigate("/admin/event-dashboard");
+            } else if (roleData?.role === "NATIONAL_CONVENER") {
+              navigate("/admin/national-convener");
+            } else if (roleData?.role === "NATIONAL_CO_CONVENER") {
+              navigate("/admin/national-co-convener");
+            } else if (roleData?.role === "REGIONAL_CONVENER" || roleData?.role === "REGIONAL_CO_CONVENER") {
+              navigate("/admin/regional-convener");
+            } else {
+              navigate("/admin");
+            }
           } else {
             toast({ title: "Welcome back!", description: "Successfully logged in." });
             navigate("/dashboard");

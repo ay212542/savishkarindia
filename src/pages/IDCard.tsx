@@ -302,6 +302,19 @@ export default function IDCard() {
 
                     <p className="text-xs text-muted-foreground">{profile?.state}</p>
 
+                    <div className="mt-2 space-y-0.5">
+                      {profile?.allow_mobile_sharing !== false && profile?.phone && (
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          {profile.phone}
+                        </p>
+                      )}
+
+                      {profile?.allow_email_sharing !== false && profile?.email && (
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1 line-clamp-1 break-all">
+                          {profile.email}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 

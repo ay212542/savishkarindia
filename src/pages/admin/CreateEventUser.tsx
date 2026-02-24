@@ -42,8 +42,9 @@ export default function CreateEventUser() {
     const [created, setCreated] = useState<{ email: string; password: string; event_name: string } | null>(null);
     const [copied, setCopied] = useState<"email" | "password" | null>(null);
 
-    // Only Super Controller can access
-    if (role && role !== "SUPER_CONTROLLER") {
+    // Super Controller and National roles can access
+    const allowedRoles = ["SUPER_CONTROLLER", "NATIONAL_CONVENER", "NATIONAL_CO_CONVENER"];
+    if (role && !allowedRoles.includes(role)) {
         navigate("/admin");
         return null;
     }
@@ -258,8 +259,9 @@ export default function CreateEventUser() {
                         <div className="p-4 bg-muted/20 rounded-xl border border-white/5 text-sm text-muted-foreground space-y-1">
                             <p className="font-medium text-foreground">What this account can do:</p>
                             <ul className="list-disc list-inside space-y-0.5">
-                                <li>Create and manage delegate registration forms</li>
-                                <li>View and export form responses</li>
+                                <li>View published events</li>
+                                <li>Import delegates for events</li>
+                                <li>View and export delegate lists</li>
                                 <li>Design and generate delegate ID cards</li>
                                 <li>Access expires automatically on the date set above</li>
                             </ul>

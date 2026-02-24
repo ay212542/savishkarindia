@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, User, LogOut, LayoutDashboard, Shield, ChevronDown, FileText, BookOpen, FileDown } from "lucide-react";
-import { useNavigate } from "react-router-dom"; // Add useNavigate
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast"; // Add useToast
+import { useToast } from "@/hooks/use-toast";
 import logoSavishkar from "@/assets/logo-savishkar.png";
 import {
   DropdownMenu,
@@ -92,7 +92,7 @@ export function Navbar() {
           </div>
 
           {/* Auth Buttons */}
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-2">
             {user ? (
               <>
                 <Link to="/dashboard">
@@ -127,12 +127,14 @@ export function Navbar() {
           </div>
 
           {/* Mobile Menu Toggle */}
-          <button
-            className="lg:hidden p-2 rounded-lg hover:bg-muted/50"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="lg:hidden flex items-center gap-1">
+            <button
+              className="p-2 rounded-lg hover:bg-muted/50"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </div>
 

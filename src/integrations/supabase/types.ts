@@ -788,6 +788,9 @@ export type Database = {
       | "STATE_CONVENER"
       | "NATIONAL_CO_CONVENER"
       | "NATIONAL_CONVENER"
+      | "REGIONAL_CO_CONVENER"
+      | "REGIONAL_CONVENER"
+      | "EVENT_MANAGER"
       | "ADMIN"
       | "SUPER_CONTROLLER"
       application_status: "pending" | "approved" | "rejected"
@@ -925,6 +928,8 @@ export const Constants = {
         "STATE_CONVENER",
         "NATIONAL_CO_CONVENER",
         "NATIONAL_CONVENER",
+        "REGIONAL_CO_CONVENER",
+        "REGIONAL_CONVENER",
         "ADMIN",
         "SUPER_CONTROLLER",
       ],

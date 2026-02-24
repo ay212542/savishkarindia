@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, FileCheck, Calendar,
   Megaphone, Palette, Bot, Settings, Shield, ChevronRight, LogOut,
   Award, MapPin, UserCog, FileText, MessageSquare, BookOpen, FileDown,
-  Handshake, LayoutTemplate, GraduationCap, Menu, X
+  Handshake, LayoutTemplate, GraduationCap, Menu, X, Map as MapIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,11 @@ import logoSavishkar from "@/assets/logo-savishkar.png";
 
 const sidebarItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/national-convener", label: "National Convener Panel", icon: Award },
+  { href: "/admin/national-co-convener", label: "National Co-Convener Panel", icon: Award },
+  { href: "/admin/national-manager", label: "National Manager", icon: Award },
+  { href: "/admin/regional-manager", label: "Regional Manager", icon: MapIcon },
+  { href: "/admin/regional-convener", label: "Regional Dashboard", icon: MapPin },
   { href: "/admin/approvals", label: "Approval Center", icon: FileCheck },
   { href: "/admin/members", label: "Member Registry", icon: Users },
   { href: "/admin/states", label: "All State Dashboard", icon: MapPin },
@@ -28,8 +33,9 @@ const sidebarItems = [
   { href: "/admin/stories", label: "Stories", icon: LayoutTemplate },
   { href: "/admin/alumni", label: "Alumni", icon: GraduationCap },
   { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
-  { href: "/admin/event-manager", label: "Event Management", icon: Calendar },
-
+  { href: "/admin/event-dashboard", label: "Event Dashboard", icon: LayoutDashboard },
+  { href: "/admin/events", label: "Manage Delegates", icon: Calendar },
+  { href: "/admin/assign-event-manager", label: "Assign Event Managers", icon: UserCog },
   { href: "/admin/cms", label: "CMS Editor", icon: Palette },
   { href: "/admin/news", label: "News Section", icon: Megaphone },
   { href: "/admin/ai-panel", label: "AI Maintenance", icon: Bot },
@@ -58,7 +64,10 @@ export default function AdminLayout() {
   };
 
   const isStateAdmin = role === "STATE_CONVENER" || role === "STATE_CO_CONVENER";
-  const hasAccess = isAdmin || isStateAdmin || user?.email === "savishkarindia@gmail.com";
+  const isNationalRole = role === "NATIONAL_CONVENER" || role === "NATIONAL_CO_CONVENER";
+  const isRegionalRole = role === "REGIONAL_CONVENER" || role === "REGIONAL_CO_CONVENER";
+  const isEventManager = role === "EVENT_MANAGER";
+  const hasAccess = isAdmin || isStateAdmin || isNationalRole || isRegionalRole || isEventManager || user?.email === "savishkarindia@gmail.com";
 
   useEffect(() => {
     // Only redirect to auth if explicitly not logged in and not loading
@@ -67,18 +76,55 @@ export default function AdminLayout() {
     }
   }, [user, loading, navigate]);
 
+  // Special redirect logic for roles hitting the generic `/admin` base route
+  useEffect(() => {
+    if (location.pathname === "/admin") {
+      if (role === "EVENT_MANAGER") {
+        navigate("/admin/event-dashboard", { replace: true });
+      } else if (role === "NATIONAL_CONVENER") {
+        navigate("/admin/national-convener", { replace: true });
+      } else if (role === "NATIONAL_CO_CONVENER") {
+        navigate("/admin/national-co-convener", { replace: true });
+      } else if (role === "REGIONAL_CONVENER" || role === "REGIONAL_CO_CONVENER") {
+        navigate("/admin/regional-convener", { replace: true });
+      }
+    }
+  }, [location.pathname, role, navigate]);
+
   // Filter sidebar items based on role
   const filteredSidebarItems = sidebarItems.filter(item => {
-    // Super Controller & Admin see everything
-    if (role === "SUPER_CONTROLLER" || role === "ADMIN" || user?.email === "savishkarindia@gmail.com") return true;
+    // Super Controller & Admin see everything except redundant sub-panels to keep sidebar clean
+    if (role === "SUPER_CONTROLLER" || role === "ADMIN" || user?.email === "savishkarindia@gmail.com") {
+      const excludedForSuperAdmin = [
+        "/admin/national-convener",
+        "/admin/national-co-convener",
+        "/admin/regional-convener"
+      ];
+      return !excludedForSuperAdmin.includes(item.href);
+    }
 
     if (role === "EVENT_MANAGER") {
-      return item.href === "/admin" || item.href === "/admin/event-manager" || item.href === "/admin/programs" || item.href === "/admin/members";
+      return item.href === "/admin" || item.href === "/admin/event-dashboard" || item.href === "/admin/events" || item.href === "/admin/programs" || item.href === "/admin/members";
+    }
+
+    // National Convener — read-only national overview
+    if (role === "NATIONAL_CONVENER") {
+      return ["/admin", "/admin/national-convener", "/admin/regional-manager", "/admin/announcements", "/admin/programs", "/admin/leadership", "/admin/events", "/admin/event-dashboard"].includes(item.href);
+    }
+
+    // National Co-Convener — slightly reduced view
+    if (role === "NATIONAL_CO_CONVENER") {
+      return ["/admin", "/admin/national-co-convener", "/admin/announcements", "/admin/programs", "/admin/events"].includes(item.href);
+    }
+
+    // Regional Roles
+    if (role === "REGIONAL_CONVENER" || role === "REGIONAL_CO_CONVENER") {
+      return ["/admin", "/admin/regional-convener", "/admin/announcements", "/admin/programs"].includes(item.href);
     }
 
     // State roles only see specific items
     const allowedItems = [
-      "/admin", // Dashboard
+      "/admin",
       "/admin/leadership",
       "/admin/districts",
       "/admin/programs",

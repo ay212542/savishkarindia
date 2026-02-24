@@ -10,7 +10,11 @@ interface Announcement {
     priority: "low" | "normal" | "high";
     target_audience: "ALL" | "DESIGNATORY";
     created_at: string;
+    author_name?: string | null;
+    author_role?: string | null;
 }
+
+import { ROLE_LABELS } from "@/lib/constants";
 
 export function AnnouncementsList({ role }: { role: string | null }) {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -66,9 +70,10 @@ export function AnnouncementsList({ role }: { role: string | null }) {
                         {a.target_audience === 'DESIGNATORY' && <Badge variant="secondary" className="text-[10px] h-5 bg-purple-500/10 text-purple-500">Admin Only</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground">{a.content}</p>
-                    <p className="text-[10px] text-muted-foreground mt-2 text-right">
-                        {new Date(a.created_at).toLocaleDateString()}
-                    </p>
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-2">
+                        <span>Issued by: {a.author_name || "Admin"} {a.author_role ? `(${ROLE_LABELS[a.author_role] || a.author_role})` : ""}</span>
+                        <span>{new Date(a.created_at).toLocaleDateString()}</span>
+                    </div>
                 </div>
             ))}
         </div>

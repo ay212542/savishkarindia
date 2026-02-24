@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Users, UserCheck, Clock, TrendingUp, Activity,
-  FileCheck, Calendar, MapPin, ArrowUpRight, School
+  FileCheck, Calendar, MapPin, ArrowUpRight, School, Shield
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { supabase } from "@/integrations/supabase/client";
 import { ROLE_LABELS } from "@/lib/constants";
 import { useAuth } from "@/contexts/AuthContext";
+import { VerificationWidget } from "@/components/ui/VerificationWidget";
 
 interface Stats {
   totalMembers: number;
@@ -261,6 +262,26 @@ END $$;`}
             <div key={stat.label}>{content}</div>
           );
         })}
+      </div>
+      
+      {/* Verification & Identification */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <VerificationWidget />
+        </div>
+        <div className="lg:col-span-2">
+            <GlassCard className="h-full flex flex-col justify-center">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-savishkar-cyan/10 rounded-xl">
+                        <Shield className="w-8 h-8 text-savishkar-cyan" />
+                    </div>
+                    <div>
+                        <h3 className="font-display font-bold text-lg">Infrastructure Security</h3>
+                        <p className="text-sm text-muted-foreground">All verification lookups are audited and restricted by regional jurisdiction policies.</p>
+                    </div>
+                </div>
+            </GlassCard>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">

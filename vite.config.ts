@@ -7,6 +7,13 @@ export default defineConfig(() => ({
   server: {
     host: "127.0.0.1",
     port: 8080,
+    proxy: {
+      '/api/gemini': {
+        target: 'https://generativelanguage.googleapis.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/gemini/, '')
+      }
+    }
   },
   plugins: [react()],
   build: {

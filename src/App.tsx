@@ -18,7 +18,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import React, { Suspense } from "react";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-
+import { ScrollToTop } from "@/components/ScrollToTop";
 // Lazy load admin pages to reduce initial bundle size
 const AdminLayout = React.lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard"));
@@ -43,7 +43,13 @@ const AlumniManager = React.lazy(() => import("./pages/admin/AlumniManager"));
 const SupportInbox = React.lazy(() => import("./pages/admin/SupportInbox"));
 const NewsManager = React.lazy(() => import("./pages/admin/NewsManager"));
 const EventManager = React.lazy(() => import("./pages/admin/EventManager"));
-const CreateEventUser = React.lazy(() => import("./pages/admin/CreateEventUser"));
+const AssignEventManager = React.lazy(() => import("./pages/admin/AssignEventManager"));
+const EventDashboard = React.lazy(() => import("./pages/admin/EventDashboard"));
+const NationalConvenerDashboard = React.lazy(() => import("./pages/admin/NationalConvenerDashboard"));
+const NationalCoConvenerDashboard = React.lazy(() => import("./pages/admin/NationalCoConvenerDashboard"));
+const NationalManager = React.lazy(() => import("./pages/admin/NationalManager"));
+const RegionalManager = React.lazy(() => import("./pages/admin/RegionalManager"));
+const RegionalConvenerDashboard = React.lazy(() => import("./pages/admin/RegionalConvenerDashboard"));
 
 const MoUTemplates = React.lazy(() => import("./pages/resources/MoUTemplates"));
 const Margdarshika = React.lazy(() => import("./pages/resources/Margdarshika"));
@@ -52,7 +58,8 @@ const News = React.lazy(() => import("./pages/News"));
 
 
 import Support from "./pages/Support"; // Keep public pages eager loaded if critical, or lazy if large
-
+import DynamicRegistration from "./pages/DynamicRegistration";
+import DelegateVerify from "./pages/DelegateVerify";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -62,11 +69,14 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop />
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/about" element={<About />} />
               <Route path="/leadership" element={<Leadership />} />
+              <Route path="/verify/delegate/:delegateId" element={<DelegateVerify />} />
+              <Route path="/register/event/:managerId" element={<DynamicRegistration />} />
               <Route path="/programs" element={<Programs />} />
               <Route path="/join" element={<Join />} />
               <Route path="/news" element={<News />} />
@@ -106,7 +116,13 @@ const App = () => (
                 <Route path="news" element={<NewsManager />} />
                 <Route path="events" element={<EventManager />} />
                 <Route path="event-manager" element={<EventManager />} />
-                <Route path="create-event-user" element={<CreateEventUser />} />
+                <Route path="event-dashboard" element={<EventDashboard />} />
+                <Route path="assign-event-manager" element={<AssignEventManager />} />
+                <Route path="national-convener" element={<NationalConvenerDashboard />} />
+                <Route path="national-co-convener" element={<NationalCoConvenerDashboard />} />
+                <Route path="national-manager" element={<NationalManager />} />
+                <Route path="regional-manager" element={<RegionalManager />} />
+                <Route path="regional-convener" element={<RegionalConvenerDashboard />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

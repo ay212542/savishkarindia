@@ -63,6 +63,7 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         savishkar: {
+          "brand-blue": "hsl(var(--savishkar-brand-blue))",
           teal: "hsl(var(--savishkar-teal))",
           orange: "hsl(var(--savishkar-orange))",
           cyan: "hsl(var(--savishkar-cyan))",
@@ -126,9 +127,9 @@ export default {
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-teal": "linear-gradient(135deg, hsl(168 84% 40%), hsl(188 94% 49%))",
-        "gradient-orange": "linear-gradient(135deg, hsl(24 95% 53%), hsl(168 84% 40%))",
-        "gradient-hero": "linear-gradient(135deg, hsl(210 40% 98%), hsl(168 84% 40%) 50%, hsl(24 95% 53%))",
+        "gradient-teal": "linear-gradient(135deg, hsl(var(--savishkar-teal)), hsl(var(--savishkar-cyan)))",
+        "gradient-orange": "linear-gradient(135deg, hsl(var(--savishkar-orange)), hsl(var(--savishkar-teal)))",
+        "gradient-hero": "linear-gradient(135deg, hsl(var(--foreground)), hsl(var(--savishkar-teal)) 50%, hsl(var(--savishkar-orange)))",
       },
     },
   },

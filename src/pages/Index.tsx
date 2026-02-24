@@ -6,9 +6,12 @@ import { Layout } from "@/components/layout/Layout";
 import { AnimatedBackground } from "@/components/ui/AnimatedBackground";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import StoryViewer from "@/components/home/StoryViewer";
 import CollabMarquee from "@/components/home/CollabMarquee";
 import AlumniCarousel from "@/components/home/AlumniCarousel";
+import { ShieldCheck, User } from "lucide-react";
 
 export default function Index() {
   return (
@@ -123,6 +126,36 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Leadership Preview Section */}
+      <section className="py-20 px-4 relative z-10 bg-gradient-to-b from-transparent via-primary/5 to-transparent">
+        <div className="container mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
+              Visionary <span className="text-primary">Leadership</span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Meet the national team driving SAVISHKAR's mission across India
+            </p>
+          </motion.div>
+
+          <IndexLeadershipPreview />
+
+          <div className="mt-12 text-center">
+            <Link to="/leadership">
+              <Button variant="outline" size="lg" className="border-primary/50 text-primary hover:bg-primary/10 gap-2">
+                View Full Team Directory
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Alumni Carousel */}
       <AlumniCarousel />
 
@@ -132,7 +165,7 @@ export default function Index() {
       {/* CTA Section */}
       <section className="py-20 px-4 relative z-10">
         <div className="container mx-auto">
-          <GlassCard className="text-center py-16 px-8">
+          <GlassCard className="text-center py-16 px-8 hover-glow border-primary/20">
             <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
               Ready to Shape the Future?
             </h2>
@@ -140,7 +173,7 @@ export default function Index() {
               Join thousands of young innovators building India's tomorrow.
             </p>
             <Link to="/join">
-              <Button size="lg" className="glow-button-orange bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
+              <Button size="lg" className="glow-button-teal text-lg px-8 py-6 gap-2">
                 Apply Now
                 <ArrowRight className="w-5 h-5" />
               </Button>
@@ -149,5 +182,105 @@ export default function Index() {
         </div>
       </section>
     </Layout>
+  );
+}
+
+// Sub-component for dynamic leadership preview on home page
+function IndexLeadershipPreview() {
+  const [topLeaders, setTopLeaders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTopLeaders() {
+      try {
+        const { data, error } = await supabase.rpc("get_public_leaders" as any);
+        if (!error && data && data.length > 0) {
+          // Take top 3 National Conveners or highest display order
+          setTopLeaders(data.slice(0, 3));
+        }
+      } catch (err) {
+        console.error("Home leadership fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTopLeaders();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="grid md:grid-cols-3 gap-8 w-full max-w-5xl mx-auto">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="glass-panel h-64 animate-pulse rounded-2xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (topLeaders.length === 0) {
+    return (
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-5xl mx-auto">
+        <GlassCard className="text-center group overflow-hidden border-primary/10">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+            <Users className="w-10 h-10 text-primary" />
+          </div>
+          <h3 className="font-display text-xl font-bold">National Team</h3>
+          <p className="text-sm text-muted-foreground mt-2">Strategic oversight and nationwide mission execution.</p>
+        </GlassCard>
+
+        <GlassCard className="text-center group overflow-hidden border-accent/10">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-accent/10 flex items-center justify-center border border-accent/20">
+            <MapPin className="w-10 h-10 text-accent" />
+          </div>
+          <h3 className="font-display text-xl font-bold">Regional Network</h3>
+          <p className="text-sm text-muted-foreground mt-2">Connecting innovation hubs across every Indian state.</p>
+        </GlassCard>
+
+        <GlassCard className="text-center group overflow-hidden border-savishkar-cyan/10">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-savishkar-cyan/10 flex items-center justify-center border border-savishkar-cyan/20">
+            <Award className="w-10 h-10 text-savishkar-cyan" />
+          </div>
+          <h3 className="font-display text-xl font-bold">Distinguished Advisors</h3>
+          <p className="text-sm text-muted-foreground mt-2">Expert guidance from industry leaders.</p>
+        </GlassCard>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-5xl mx-auto">
+      {topLeaders.map((leader, i) => (
+        <motion.div
+          key={leader.id}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.1 }}
+          viewport={{ once: true }}
+        >
+          <GlassCard className="text-center group hover:border-primary/50 transition-all p-8 h-full flex flex-col items-center">
+            <div className="relative mb-6">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden border-2 border-primary/30 group-hover:border-primary/60 transition-colors">
+                {leader.avatar_url ? (
+                  <img src={leader.avatar_url} alt={leader.full_name} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-12 h-12 text-muted-foreground" />
+                )}
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-background border border-primary/30 rounded-full p-1.5 shadow-lg">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+              </div>
+            </div>
+
+            <h3 className="font-display text-xl font-bold mb-1">{leader.full_name}</h3>
+            <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">
+              {leader.role.replace(/_/g, " ")}
+            </p>
+            <p className="text-sm text-muted-foreground line-clamp-2 italic">
+              {leader.designation || "Dedicated to National Innovation"}
+            </p>
+          </GlassCard>
+        </motion.div>
+      ))}
+    </div>
   );
 }

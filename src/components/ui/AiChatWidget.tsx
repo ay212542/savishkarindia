@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 interface Message {
     id: string;
@@ -58,79 +58,73 @@ export function AiChatWidget() {
         setLoading(true);
 
         try {
-            // Check for API key in environment
-            const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+            // Fallback used so the Vite server doesn't need to be restarted to pick up the .env change
+            const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyD3SE5gW5Th9bbPoItY413T3HCglJeXb3Q";
             let aiResponse = "";
 
             if (geminiApiKey) {
                 try {
                     // Initialize the real Gemini AI model
-                    const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+                    // We route it through our Vite proxy to bypass adblockers/Brave shields
+                    const genAI = new GoogleGenerativeAI(geminiApiKey);
+                    
+                    // The standard getGenerativeModel method accepts RequestOptions in the second param
+                    // customFetch is part of the API, any type issues can be ignored with ts-ignore or explicit casting
+                    const model = genAI.getGenerativeModel(
+                        { model: "gemini-2.5-flash" },
+                        { baseUrl: "/api/gemini" }
+                    );
 
-                    const systemPrompt = `You are an elite Business Innovation Consultant for SAVISHKAR India. 
-                    Your expertise includes: Startups, Entrepreneurship, Government Schemes (Startup India), Funding, Scaling, and Business Strategy.
-                    Answer with professional, high-value insights. Use bullet points for clarity. Be encouraging and helpful.
-                    Always respond primarily in the language the user asked the question in (e.g. Hindi, English).
-                    If a question is completely unrelated to business/innovation, politely refocus the user to SAVISHKAR's mission.`;
+                    const systemPrompt = `You are the Lead Business Strategist for SAVISHKAR India. 
+                    Mission: Empower next-gen innovators to transform ideas into impact.
+                    Expertise: Startups, MSME schemes, Seed Funding, ISRO/DRDO mentorship, Pitch Decks, and scaling strategies.
+                    Tone: Professional, elite, yet highly accessible.
+                    Rules:
+                    1. Use bullet points for structured advice.
+                    2. If asked about SAVISHKAR, mention its mission to support youth innovation in India.
+                    3. If unrelated to business/innovation, politely bridge back to SAVISHKAR's core focus.
+                    4. Respond primarily in English unless Hindi or another language is preferred by the user.
+                    
+                    Respond as an expert mentor.`;
 
-                    const response = await ai.models.generateContent({
-                        model: 'gemini-2.5-flash',
+                    const result = await model.generateContent({
                         contents: [
                             { role: 'user', parts: [{ text: systemPrompt + "\n\nUser Question: " + userMessage }] }
                         ],
                     });
 
-                    aiResponse = response.text || "I apologize, but I couldn't formulate a response.";
+                    aiResponse = result.response.text() || "I apologize, but I couldn't formulate a response right now.";
 
-                } catch (apiError) {
+                } catch (apiError: any) {
                     console.error("Gemini API Error:", apiError);
-                    aiResponse = "I'm currently experiencing high network traffic. Please try again later.";
+                    if (apiError?.message?.includes("Failed to fetch")) {
+                        aiResponse = "Error connecting to AI: Your browser (like Brave Shields) or an AdBlocker is blocking the connection to Google's AI servers. Please disable shields/adblock for this local site.";
+                    } else {
+                        aiResponse = "Error connecting to AI: " + (apiError?.message || JSON.stringify(apiError));
+                    }
                 }
             } else {
-                // Fallback: "Simulated LLM" Mode (If no API Key provided by Admin yet)
-                console.log("No VITE_GEMINI_API_KEY found. Falling back to Simulated LLM.");
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Thinking time
+                // Fallback: Professional Smart Response System (Always stays ready)
+                console.warn("No VITE_GEMINI_API_KEY found. Using local logic.");
+                await new Promise(resolve => setTimeout(resolve, 800));
 
                 const text = userMessage.toLowerCase();
 
                 if (text.match(/\b(hi|hello|hey|greetings|namaste)\b/)) {
-                    aiResponse = "Hello there! It's great to connect. I'm here to help you navigate your startup journey. What's on your mind today? We can discuss ideas, funding, or even just how to get started.";
+                    aiResponse = "Welcome to the SAVISHKAR Command Center. I am your strategic AI assistant. How can I help you transform your idea into impact today?";
                 }
-                else if (text.match(/\b(how are you|who are you|what are you)\b/)) {
-                    aiResponse = "I'm doing great, fully operational and ready to assist! I am an advanced AI advisor designed specialized for the SAVISHKAR ecosystem. My goal is to help innovators like you succeed.";
+                else if (text.match(/\b(register|startup|business|idea)\b/)) {
+                    aiResponse = "A great venture starts with a single step. To register your startup within the SAVISHKAR ecosystem, head to the 'Join Us' section. We offer specific paths for Innovators, Students, and Established Startups.";
                 }
-                else if (text.match(/\b(fund|money|invest|capital|grant|finance)\b/)) {
-                    aiResponse = "Funding is often the fuel for any great venture. Generally, you have a few options: bootstrapping, seeking angel investors, or applying for government grants. SAVISHKAR specifically offers Seed Grants for early-stage prototypes. Have you validated your product yet? That usually helps in securing funds.";
-                }
-                else if (text.match(/\b(idea|thinking|plan|startup|business)\b/)) {
-                    aiResponse = "That sounds promising. Every great startup begins with a simple idea. The key is execution and validation. I'd suggest documenting your core concept and maybe running it by a few potential users. We actually have a 'Pitch Deck' template in the Resources section that could help you structure your thoughts effectively.";
-                }
-                else if (text.match(/\b(join|register|signup|account|login)\b/)) {
-                    aiResponse = "I'd love for you to join our community. It's a straightforward process—just click the 'Join Us' button at the top right of the page. You'll need to create a profile, and you'll receive a digital ID card that gives you access to all our mentorship and funding programs.";
-                }
-                else if (text.match(/\b(thank|thanks|good|great|awesome)\b/)) {
-                    aiResponse = "You're very welcome! I'm glad I could help. If any other questions pop up as you continue working, feel free to ask. I'm always here.";
-                }
-                else if (text.match(/\b(mentor|guide|advice|help)\b/)) {
-                    aiResponse = "Having a mentor can drastically reduce your learning curve. We have a network of industry veterans from organizations like ISRO and DRDO. Once you're a registered member, you can book distinct 1-on-1 sessions with them to get personalized guidance.";
+                else if (text.match(/\b(fund|money|invest|grant)\b/)) {
+                    aiResponse = "SAVISHKAR provides access to diverse funding pipelines, including Seed Grants for verified prototypes. Have you prepared your pitch deck yet? Our resources section can help you get started.";
                 }
                 else {
-                    const fillers = [
-                        "That's an interesting perspective. Could you tell me a bit more about that?",
-                        "I understand. Building a venture involves many such moving parts. How are you planning to tackle the next step?",
-                        "That makes sense. Innovation often requires navigating these kinds of complexities. Is there a specific hurdle you're facing right now?",
-                        "I see. That's a crucial part of the process. I'd recommend looking into our 'Programs' section for more structured support on this."
-                    ];
-                    aiResponse = fillers[Math.floor(Math.random() * fillers.length)];
-                }
-
-                // Alert for admin 
-                if (userMessage.toLowerCase().includes("language") || userMessage.toLowerCase().includes("hindi")) {
-                    aiResponse += "\n\n*(Note: To enable true multilingual support and smarter answers, please set `VITE_GEMINI_API_KEY` in your .env file)*";
+                    aiResponse = "That's a crucial aspect of the innovation process. To give you the best strategic advice, I recommend setting up the `VITE_GEMINI_API_KEY` for full cognitive processing, or you can explore our 'Programs' section for direct mentorship.";
                 }
             }
 
-            if (!aiResponse) aiResponse = "I apologize, but I am unable to process that analysis right now.";
+            if (!aiResponse) aiResponse = "Consultant mode offline. Please check your network configuration.";
 
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
@@ -139,7 +133,7 @@ export function AiChatWidget() {
                 createdAt: Date.now()
             }]);
 
-            // Try to log chat, but don't fail if it fails
+            // Database Logging (Security Audit)
             try {
                 await supabase.from("ai_chat_logs").insert({
                     user_id: user?.id || null,
@@ -147,14 +141,16 @@ export function AiChatWidget() {
                     message: userMessage,
                     ai_response: aiResponse
                 });
-            } catch (e) { console.error("Failed to log chat", e); }
+            } catch (e) {
+                console.error("Audit log failed:", e);
+            }
 
         } catch (error) {
-            console.error("Chat error:", error);
+            console.error("Communication failure:", error);
             setMessages(prev => [...prev, {
                 id: Date.now().toString(),
                 role: "assistant",
-                content: "Connection interrupted. Please try again.",
+                content: "Communication line interrupted. Resetting cognitive modules...",
                 createdAt: Date.now()
             }]);
         } finally {

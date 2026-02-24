@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Loader2, Users, MapPin, Award, ArrowRight, Plus, Copy, Check } from "lucide-react";
+import { Loader2, Users, MapPin, Award, ArrowRight, Plus, Copy, Check, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PRANT_LIST } from "@/lib/constants";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { VerificationWidget } from "@/components/ui/VerificationWidget";
 
 export default function DistrictManager() {
     const [stats, setStats] = useState<any[]>([]);
@@ -181,6 +182,24 @@ export default function DistrictManager() {
         }
     }
 
+    async function handleResetPassword(email: string, stateName: string) {
+        if (!confirm(`Send password reset email to the admin of ${stateName} (${email})?`)) return;
+        setProcessing(`reset-${email}`);
+
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/auth?reset=true`,
+            });
+            if (error) throw error;
+            toast({ title: "Reset Email Sent", description: `Password reset link sent to ${email}.` });
+        } catch (error: any) {
+            console.error("Reset error:", error);
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            setProcessing(null);
+        }
+    }
+
     async function handleCreateStateAdmin() {
         if (!newUser.full_name || !newUser.email || !newUser.state) {
             toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
@@ -240,6 +259,26 @@ export default function DistrictManager() {
                 </Button>
             </div>
 
+            {/* State Verification Module */}
+            <div className="grid lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                    <VerificationWidget />
+                </div>
+                <div className="lg:col-span-2">
+                    <GlassCard className="h-full flex flex-col justify-center border-emerald-500/20 bg-emerald-500/5">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-emerald-500/10 rounded-xl">
+                                <Users className="w-8 h-8 text-emerald-500" />
+                            </div>
+                            <div>
+                                <h3 className="font-display font-bold text-lg text-emerald-500">Member Verification</h3>
+                                <p className="text-sm text-muted-foreground">State administrators can use this tool to quickly verify member credentials during regional events or meetings.</p>
+                            </div>
+                        </div>
+                    </GlassCard>
+                </div>
+            </div>
+
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {stats.map((stat) => (
                     <GlassCard key={stat.prant} className="relative overflow-hidden group">
@@ -259,16 +298,28 @@ export default function DistrictManager() {
                                         <p className="text-xs text-muted-foreground truncate">{stateAdmins.get(stat.prant).email}</p>
                                     </div>
                                     {(currentUserRole === "SUPER_CONTROLLER") && (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                                            title="Dismiss Admin"
-                                            disabled={processing === stateAdmins.get(stat.prant).user_id}
-                                            onClick={() => handleDismissAdmin(stateAdmins.get(stat.prant).user_id, stat.prant)}
-                                        >
-                                            <Users className="w-3 h-3" />
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 hover:bg-muted text-muted-foreground hover:text-primary"
+                                                title="Send Password Reset Email"
+                                                disabled={processing === `reset-${stateAdmins.get(stat.prant).email}`}
+                                                onClick={() => handleResetPassword(stateAdmins.get(stat.prant).email, stat.prant)}
+                                            >
+                                                <KeyRound className="w-3 h-3" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                                title="Dismiss Admin"
+                                                disabled={processing === stateAdmins.get(stat.prant).user_id}
+                                                onClick={() => handleDismissAdmin(stateAdmins.get(stat.prant).user_id, stat.prant)}
+                                            >
+                                                <Users className="w-3 h-3" />
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             ) : (

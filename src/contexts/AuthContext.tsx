@@ -23,6 +23,8 @@ interface Profile {
   is_temporary_password?: boolean;
   current_session_id?: string; // Added for session enforcement
   event_manager_expiry?: string | null; // For temporary access limits
+  allow_email_sharing?: boolean | null;
+  allow_mobile_sharing?: boolean | null;
 }
 
 interface AuthContextType {
@@ -295,7 +297,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isAdmin = role === "ADMIN" || role === "SUPER_CONTROLLER" || role === "STATE_CONVENER" || role === "STATE_CO_CONVENER";
+  const isAdmin =
+    role === "ADMIN" ||
+    role === "SUPER_CONTROLLER" ||
+    role === "STATE_CONVENER" ||
+    role === "STATE_CO_CONVENER" ||
+    role === "NATIONAL_CONVENER" ||
+    role === "NATIONAL_CO_CONVENER" ||
+    role === "REGIONAL_CONVENER" ||
+    role === "REGIONAL_CO_CONVENER" ||
+    role === "EVENT_MANAGER";
 
   return (
     <AuthContext.Provider value={{

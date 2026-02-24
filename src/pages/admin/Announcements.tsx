@@ -23,6 +23,8 @@ interface Announcement {
   is_active: boolean;
   created_at: string;
   created_by: string | null;
+  author_name?: string | null;
+  author_role?: string | null;
 }
 
 const PRIORITY_STYLES = {
@@ -44,7 +46,7 @@ export default function Announcements() {
     target_audience: "ALL",
     is_active: true
   });
-  const { user } = useAuth();
+  const { user, profile, role } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -138,7 +140,9 @@ export default function Announcements() {
           .from("announcements")
           .insert({
             ...payload,
-            created_by: user?.id
+            created_by: user?.id,
+            author_name: profile?.full_name || "Admin",
+            author_role: role || "ADMIN"
           })
           .select()
           .single();
@@ -259,7 +263,7 @@ export default function Announcements() {
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">{announcement.content}</p>
                       <p className="text-xs text-muted-foreground">
-                        Created {new Date(announcement.created_at).toLocaleDateString("en-IN")}
+                        Issued by: {announcement.author_name || "Admin"} ({announcement.author_role || "ADMIN"}) • {new Date(announcement.created_at).toLocaleDateString("en-IN")}
                       </p>
                     </div>
 

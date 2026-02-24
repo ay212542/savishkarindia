@@ -48,76 +48,111 @@ export default function Verify() {
 
       setStatus("loading");
       try {
-        // 1. Try public RPC first (works for everyone including unauthenticated)
-        const { data: rpcData, error: rpcError } = await supabase
-          .rpc("get_member_public_profile" as any, { lookup_id: membershipId });
+        let lookupType: "membership_id" | "email" | "phone" = "membership_id";
 
-        if (rpcData && !rpcError && (rpcData as any).length > 0) {
-          const profile = (rpcData as any)[0];
+        // Smart Detection
+        if (membershipId.includes("@")) {
+          lookupType = "email";
+        } else if (/^[\d+\-\s]+$/.test(membershipId) && membershipId.replace(/\D/g, "").length >= 10) {
+          lookupType = "phone";
+        }
+
+        // Try RPC first for membership_id because of potential public RLS restrictions
+        if (lookupType === "membership_id") {
+          const { data: rpcData, error: rpcError } = await supabase
+            .rpc("get_member_public_profile" as any, { lookup_id: membershipId });
+
+          if (rpcData && !rpcError && (rpcData as any).length > 0) {
+            const profile = (rpcData as any)[0];
+            setMemberData({
+              full_name: profile.full_name,
+              email: profile.allow_email_sharing !== false ? profile.email : null,
+              membership_id: profile.membership_id,
+              state: profile.state,
+              designation: profile.designation,
+              avatar_url: profile.avatar_url,
+              created_at: profile.created_at,
+              updated_at: profile.created_at, // Use created_at as updated_at isn't in RPC
+              role: profile.role || "MEMBER",
+              status: "ACTIVE",
+              joined_year: profile.joined_year,
+              phone: profile.allow_mobile_sharing !== false ? profile.phone : null
+            });
+            setStatus("active");
+            return;
+          }
+        }
+
+        let query = supabase
+          .from("profiles")
+          .select("*");
+
+        if (lookupType === "membership_id") query = query.eq("membership_id", membershipId);
+        else if (lookupType === "email") query = query.ilike("email", membershipId);
+        else if (lookupType === "phone") query = query.eq("phone", membershipId);
+
+        const { data: profileData, error: profileError } = await query.maybeSingle();
+
+        if (profileData && !profileError) {
+          const profile = profileData as any;
+          // Get role separately
+          let userRole = "MEMBER";
+          if (profile.user_id) {
+            const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", profile.user_id).maybeSingle();
+            if (roleData?.role) userRole = roleData.role;
+          }
+
           setMemberData({
             full_name: profile.full_name,
-            // null = column doesn't exist yet (show by default). false = explicitly hidden.
-            email: profile.allow_email_sharing !== false ? profile.email : null,
+            email: profile["allow_email_sharing"] !== false ? profile.email : null,
             membership_id: profile.membership_id,
             state: profile.state,
-            designation: null, // Basic view
+            designation: profile.designation,
             avatar_url: profile.avatar_url,
             created_at: profile.created_at,
-            updated_at: profile.created_at,
-            role: profile.role,
+            updated_at: profile.updated_at,
+            role: userRole,
             status: "ACTIVE",
-            joined_year: profile.joined_year,
-            phone: profile.allow_mobile_sharing !== false ? profile.phone : null
+            joined_year: profile["joined_year"],
+            phone: profile["allow_mobile_sharing"] !== false ? profile.phone : null
           });
           setStatus("active");
           return;
         }
 
-        // 2. Fallback: If not found via RPC, it might be a pending/rejected application
-        // (This still requires some permissions or open policies on applications table)
-        const { data: application } = await (supabase
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .from("applications") as any)
-          .select("*")
-          .eq("membership_id", membershipId)
-          .maybeSingle();
+        // 2. Fallback: Check applications
+        // Only if searching by email or phone, as applications don't have membership_id
+        if (lookupType === "membership_id") {
+          setStatus("not_found");
+          return;
+        }
 
-        if (application) {
-          if (application.status === "pending") {
-            setMemberData({
-              full_name: application.full_name,
-              email: application.email,
-              membership_id: membershipId,
-              state: application.state,
-              designation: application.designation,
-              avatar_url: application.photo_url,
-              created_at: application.applied_at,
-              updated_at: application.applied_at,
-              role: null,
-              status: "PENDING",
-              phone: application.phone
-            });
-            setStatus("pending");
-            return;
-          }
-          if (application.status === "rejected") {
-            setMemberData({
-              full_name: application.full_name,
-              email: application.email,
-              membership_id: membershipId,
-              state: application.state,
-              designation: application.designation,
-              avatar_url: application.photo_url,
-              created_at: application.applied_at,
-              updated_at: application.reviewed_at || application.applied_at,
-              role: null,
-              status: "REJECTED",
-              rejection_reason: application.rejection_reason,
-              phone: application.phone
-            });
-            setStatus("rejected");
-            return;
-          }
+        let appQuery = supabase.from("applications").select("*");
+
+        if (lookupType === "email") appQuery = appQuery.ilike("email", membershipId);
+        else if (lookupType === "phone") appQuery = appQuery.eq("phone", membershipId);
+
+        const { data: applicationData } = await appQuery.maybeSingle();
+
+        if (applicationData) {
+          const application = applicationData as any;
+          const appStatus = application.status.toUpperCase() as "PENDING" | "REJECTED";
+
+          setMemberData({
+            full_name: application.full_name,
+            email: application.email,
+            membership_id: "PENDING",
+            state: application.state,
+            designation: application.designation,
+            avatar_url: application.photo_url,
+            created_at: application.applied_at,
+            updated_at: application.applied_at,
+            role: "MEMBER",
+            status: appStatus,
+            phone: application.phone
+          });
+          setStatus(appStatus.toLowerCase() as any);
+          return;
         }
 
         // Not found anywhere
@@ -228,7 +263,7 @@ export default function Verify() {
                 <div className="space-y-4">
                   <form onSubmit={handleSearch} className="flex gap-2">
                     <Input
-                      placeholder="Enter Membership ID (e.g. SAV-MBR...)"
+                      placeholder="ID, Email or Phone Number..."
                       value={inputId}
                       onChange={(e) => setInputId(e.target.value)}
                       className="bg-white/5"
