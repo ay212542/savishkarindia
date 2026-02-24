@@ -72,7 +72,10 @@ export function AiChatWidget() {
                     // customFetch is part of the API, any type issues can be ignored with ts-ignore or explicit casting
                     const model = genAI.getGenerativeModel(
                         { model: "gemini-1.5-flash" },
-                        { baseUrl: "/api/gemini" }
+                        { 
+                          baseUrl: "/api/gemini",
+                          apiVersion: "v1" 
+                        }
                     );
 
                     const systemPrompt = `You are the Lead Business Strategist for SAVISHKAR India. 

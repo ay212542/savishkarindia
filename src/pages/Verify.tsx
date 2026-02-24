@@ -95,8 +95,9 @@ export default function Verify() {
           .select("*");
 
         if (lookupType === "membership_id") {
-          // Use Case-Insensitive filter for direct query too
-          query = query.ilike("membership_id", membershipId.trim());
+          // Use Case-Insensitive filter and handle numeric-only matches as fallback
+          const cleanedId = membershipId.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+          query = query.or(`membership_id.ilike.%${membershipId.trim()}%,membership_id.ilike.%${cleanedId}%`);
         }
         else if (lookupType === "email") query = query.ilike("email", membershipId.trim());
         else if (lookupType === "phone") query = query.eq("phone", membershipId.trim());
